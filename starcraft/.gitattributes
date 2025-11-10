@@ -1,0 +1,212 @@
+# Unity generated files
+*.cs text diff=csharp eol=lf
+*.js text eol=lf
+*.boo text eol=lf
+*.shader text eol=lf
+
+*.cs.meta text eol=lf
+*.js.meta text eol=lf
+*.boo.meta text eol=lf
+*.shader.meta text eol=lf
+
+*.cginc text eol=lf
+*.cginc.meta text eol=lf
+
+*.hlsl text eol=lf
+*.hlsl.meta text eol=lf
+
+*.asmdef text eol=lf
+*.asmdef.meta text eol=lf
+
+*.asmref text eol=lf
+*.asmref.meta text eol=lf
+
+# Unity binary files
+*.asset binary
+*.prefab binary
+*.unity binary
+*.mat binary
+*.physicMaterial binary
+*.physicsMaterial2D binary
+*.playable binary
+*.controller binary
+*.overrideController binary
+*.anim binary
+*.mask binary
+*.brush binary
+*.flare binary
+*.fontsettings binary
+*.guiskin binary
+*.spriteatlas binary
+*.terrainlayer binary
+*.cubemap binary
+*.renderTexture binary
+*.sprite binary
+*.texture2D binary
+*.texture3D binary
+*.cubemapArray binary
+*.texture2DArray binary
+*.lighting binary
+*.signal binary
+*.preset binary
+*.preset.meta text eol=lf
+
+# Unity meta files
+*.meta text eol=lf merge=unityyamlmerge
+
+# Unity YAML files
+*.unity text eol=lf merge=unityyamlmerge
+*.prefab text eol=lf merge=unityyamlmerge
+*.asset text eol=lf merge=unityyamlmerge
+*.mat text eol=lf merge=unityyamlmerge
+*.physicMaterial text eol=lf merge=unityyamlmerge
+*.physicsMaterial2D text eol=lf merge=unityyamlmerge
+*.playable text eol=lf merge=unityyamlmerge
+*.controller text eol=lf merge=unityyamlmerge
+*.overrideController text eol=lf merge=unityyamlmerge
+*.anim text eol=lf merge=unityyamlmerge
+*.mask text eol=lf merge=unityyamlmerge
+*.brush text eol=lf merge=unityyamlmerge
+*.flare text eol=lf merge=unityyamlmerge
+*.fontsettings text eol=lf merge=unityyamlmerge
+*.guiskin text eol=lf merge=unityyamlmerge
+*.spriteatlas text eol=lf merge=unityyamlmerge
+*.terrainlayer text eol=lf merge=unityyamlmerge
+*.cubemap text eol=lf merge=unityyamlmerge
+*.renderTexture text eol=lf merge=unityyamlmerge
+*.sprite text eol=lf merge=unityyamlmerge
+*.texture2D text eol=lf merge=unityyamlmerge
+*.texture3D text eol=lf merge=unityyamlmerge
+*.cubemapArray text eol=lf merge=unityyamlmerge
+*.texture2DArray text eol=lf merge=unityyamlmerge
+*.lighting text eol=lf merge=unityyamlmerge
+*.signal text eol=lf merge=unityyamlmerge
+*.preset text eol=lf merge=unityyamlmerge
+
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.tga binary
+*.gif binary
+*.bmp binary
+*.tiff binary
+*.psd binary
+*.exr binary
+
+# Audio
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.aiff binary
+*.aif binary
+*.mod binary
+*.it binary
+*.s3m binary
+*.xm binary
+
+# Video
+*.mov binary
+*.mpg binary
+*.mpeg binary
+*.mp4 binary
+*.avi binary
+*.asf binary
+
+# 3D models
+*.fbx binary
+*.dae binary
+*.3ds binary
+*.dxf binary
+*.obj binary
+*.skp binary
+*.blend binary
+*.blend1 binary
+*.max binary
+*.c4d binary
+*.mb binary
+*.ma binary
+*.lws binary
+*.lwo binary
+*.lxo binary
+*.xsi binary
+*.ply binary
+*.stl binary
+*.ac binary
+*.ms3d binary
+*.b3d binary
+*.q3o binary
+*.q3s binary
+*.raw binary
+*.ter binary
+*.md3 binary
+*.md2 binary
+*.md5mesh binary
+*.md5anim binary
+*.md5camera binary
+*.smd binary
+*.vta binary
+*.mdc binary
+*.dmc binary
+*.vvd binary
+*.vtf binary
+*.3dm binary
+*.3mf binary
+*.amf binary
+*.dae binary
+*.dwfx binary
+*.dwg binary
+*.dxf binary
+*.fcstd binary
+*.ifc binary
+*.iges binary
+*.igs binary
+*.jt binary
+*.model binary
+*.obj binary
+*.off binary
+*.ply binary
+*.rlm binary
+*.step binary
+*.stp binary
+*.stl binary
+*.wrl binary
+*.x3d binary
+*.x3db binary
+*.x3dv binary
+*.xgl binary
+*.zgl binary
+
+# Archives
+*.7z binary
+*.bz2 binary
+*.gz binary
+*.rar binary
+*.tar binary
+*.zip binary
+
+# Documents
+*.pdf binary
+*.doc binary
+*.docx binary
+*.xls binary
+*.xlsx binary
+*.ppt binary
+*.pptx binary
+
+# Other
+*.dll binary
+*.so binary
+*.dylib binary
+*.a binary
+*.lib binary
+*.exe binary
+*.bat binary
+*.cmd binary
+*.com binary
+*.pif binary
+*.scr binary
+*.vbs binary
+*.jar binary
+*.class binary
+

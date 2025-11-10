@@ -1,0 +1,146 @@
+using Core.Enums;
+using Core.Events;
+using Core.Interfaces;
+using DroneResourceCollection.Entities.Drone;
+using UnityEngine;
+
+namespace Entities.Drone
+{
+    /// <summary>
+    /// Главный компонент дрона
+    /// Реализует интерфейс IDrone и координирует работу всех подсистем
+    /// </summary>
+    [RequireComponent(typeof(DroneMovement))]
+    [RequireComponent(typeof(DroneSteering))]
+    [RequireComponent(typeof(DroneStateMachine))]
+    [RequireComponent(typeof(DroneVisuals))]
+    [RequireComponent(typeof(DronePathRenderer))]
+    public class Drone : MonoBehaviour, IDrone
+    {
+        private static int _nextId = 1;
+        
+        [SerializeField] private int id;
+        [SerializeField] private FactionType faction;
+        [SerializeField] private IBase _homeBase;
+        
+        private DroneMovement _movement;
+        private DroneSteering _steering;
+        private DroneStateMachine _stateMachine;
+        private DroneVisuals _visuals;
+        private DronePathRenderer _pathRenderer;
+        
+        private IResource _targetResource;
+        private INavigationService _navigationService;
+        private IResourceService _resourceService;
+        private IDroneService _droneService;
+
+        public int Id => id;
+        public FactionType Faction => faction;
+        public DroneState CurrentState => _stateMachine != null ? _stateMachine.CurrentState : DroneState.Idle;
+        public Vector3 Position => transform.position;
+        public float Speed 
+        { 
+            get => _movement ? _movement.Speed : 5f; 
+            set 
+            { 
+                if (_movement)
+                {
+                    _movement.Speed = value;
+                }
+            }
+        }
+        public IBase HomeBase => _homeBase;
+        public IResource TargetResource => _targetResource;
+
+        private void Awake()
+        {
+            // Генерируем уникальный ID
+            if (id == 0)
+            {
+                id = _nextId++;
+            }
+            
+            // Получаем компоненты
+            _movement = GetComponent<DroneMovement>();
+            _steering = GetComponent<DroneSteering>();
+            _stateMachine = GetComponent<DroneStateMachine>();
+            _visuals = GetComponent<DroneVisuals>();
+            _pathRenderer = GetComponent<DronePathRenderer>();
+        }
+
+        public void Initialize(
+            INavigationService navigationService,
+            IResourceService resourceService,
+            IDroneService droneService)
+        {
+            _navigationService = navigationService;
+            _resourceService = resourceService;
+            _droneService = droneService;
+            
+            _steering.Initialize(this, _droneService);
+            _movement.Initialize(this, _navigationService, _steering.SteeringManager);
+            _stateMachine.Initialize(this, _resourceService);
+            
+            _droneService.RegisterDrone(this);
+            
+            EventBus.Instance.Publish(new DroneSpawnedEvent(this));
+        }
+
+        public void SetTargetPosition(Vector3 position)
+        {
+            if (_movement)
+            {
+                _movement.SetTargetPosition(position);
+            }
+        }
+
+        public void SetTargetResource(IResource resource)
+        {
+            _targetResource = resource;
+            if (resource != null && _movement)
+            {
+                _movement.SetTargetPosition(resource.Position);
+            }
+        }
+
+        public void ClearTargetResource()
+        {
+            if (_targetResource != null)
+            {
+                _targetResource.Release();
+                _targetResource = null;
+            }
+            
+            if (_movement)
+            {
+                _movement.ClearTarget();
+            }
+        }
+
+        public void SetShowPath(bool show)
+        {
+            if (_pathRenderer != null)
+            {
+                _pathRenderer.ShowPath = show;
+            }
+        }
+
+        
+        public void SetHomeBase(global::Entities.Base.Base homeBase)
+        {
+            this._homeBase = homeBase;
+            if (homeBase != null)
+            {
+                faction = homeBase.Faction;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            ClearTargetResource();
+
+            _droneService?.UnregisterDrone(this);
+        }
+    }
+}
+
