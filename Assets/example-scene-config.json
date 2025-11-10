@@ -1,0 +1,173 @@
+{
+  "scene_setup_guide": {
+    "description": "Example configuration for Unity scene setup",
+    "game_objects": {
+      "ground": {
+        "type": "Plane",
+        "position": [0, 0, 0],
+        "scale": [10, 1, 10],
+        "material": "Default",
+        "navigation_static": true,
+        "notes": "Mark as Navigation Static for NavMesh"
+      },
+      "base": {
+        "type": "Empty GameObject with Cube child",
+        "position": [0, 0.5, 0],
+        "child_scale": [2, 1, 2],
+        "material": "Blue",
+        "components": ["Base.cs"],
+        "prefab_name": "Base",
+        "inspector_values": {
+          "dronePrefab": "Reference to Drone prefab",
+          "buildCooldown": 3.0,
+          "initialDrones": 3,
+          "spawnRadius": 2.0
+        }
+      },
+      "drone_prefab": {
+        "type": "Empty GameObject with Capsule child",
+        "child_scale": [0.5, 0.5, 0.5],
+        "material": "Green",
+        "components": ["Drone.cs", "NavMeshAgent (optional)"],
+        "prefab_name": "Drone",
+        "inspector_values": {
+          "searchRadius": 20.0,
+          "collectRange": 1.0,
+          "moveSpeed": 3.5,
+          "carryCapacity": 5
+        },
+        "navmesh_agent": {
+          "speed": 3.5,
+          "radius": 0.5,
+          "height": 1.0,
+          "obstacle_avoidance": "High Quality"
+        }
+      },
+      "resource_prefab": {
+        "type": "Empty GameObject with Sphere child",
+        "child_scale": [0.8, 0.8, 0.8],
+        "material": "Yellow",
+        "components": ["Resource.cs"],
+        "prefab_name": "Resource",
+        "inspector_values": {
+          "minCharges": 10,
+          "maxCharges": 50
+        }
+      },
+      "main_camera": {
+        "position": [0, 30, -15],
+        "rotation": [60, 0, 0],
+        "components": ["CameraController.cs (optional)"],
+        "inspector_values": {
+          "panSpeed": 20.0,
+          "zoomSpeed": 10.0,
+          "minZoom": 10.0,
+          "maxZoom": 50.0
+        }
+      },
+      "minimap_camera": {
+        "position": [0, 50, 0],
+        "rotation": [90, 0, 0],
+        "orthographic": true,
+        "orthographic_size": 30,
+        "target_texture": "256x256 RenderTexture",
+        "notes": "Create RenderTexture in Assets, assign to camera"
+      },
+      "game_manager": {
+        "type": "Empty GameObject",
+        "components": ["GameManager.cs"],
+        "inspector_values": {
+          "baseObject": "Reference to Base in scene",
+          "resourcePrefab": "Reference to Resource prefab",
+          "resourceCount": 15,
+          "mapSize": 40.0,
+          "uiManager": "Reference to UIManager"
+        }
+      },
+      "ui_manager": {
+        "type": "Empty GameObject",
+        "components": ["UIManager.cs"],
+        "inspector_values": {
+          "resourceText": "Reference to Resource Text UI",
+          "droneText": "Reference to Drone Text UI",
+          "instructionsText": "Reference to Instructions Text UI",
+          "minimapImage": "Reference to RawImage UI",
+          "minimapCamera": "Reference to Minimap Camera"
+        }
+      }
+    },
+    "ui_canvas": {
+      "canvas_type": "Screen Space - Overlay",
+      "canvas_scaler": "Scale With Screen Size",
+      "reference_resolution": [1920, 1080],
+      "ui_elements": {
+        "resource_text": {
+          "type": "Text",
+          "position": "Top-Left",
+          "anchor": "TopLeft",
+          "text": "Resources: 0",
+          "font_size": 24,
+          "color": "White"
+        },
+        "drone_text": {
+          "type": "Text",
+          "position": "Top-Left (below resources)",
+          "anchor": "TopLeft",
+          "text": "Drones: 0",
+          "font_size": 24,
+          "color": "White"
+        },
+        "instructions_text": {
+          "type": "Text",
+          "position": "Bottom-Center",
+          "anchor": "BottomCenter",
+          "text": "Press SPACE to build a new drone",
+          "font_size": 18,
+          "color": "White"
+        },
+        "minimap_image": {
+          "type": "RawImage",
+          "position": "Top-Right",
+          "anchor": "TopRight",
+          "size": [200, 200],
+          "texture": "Link to Minimap Camera RenderTexture"
+        }
+      }
+    },
+    "navmesh_settings": {
+      "agent_radius": 0.5,
+      "agent_height": 2.0,
+      "max_slope": 45.0,
+      "step_height": 0.4,
+      "notes": "Bake NavMesh after marking ground as Navigation Static"
+    },
+    "material_colors": {
+      "base": "#0000FF",
+      "drone": "#00FF00",
+      "resource": "#FFFF00",
+      "ground": "#808080"
+    }
+  },
+  "quick_test": {
+    "description": "Minimal setup for quick testing without prefabs",
+    "steps": [
+      "1. Create Plane (ground)",
+      "2. Create Cube, add Base.cs",
+      "3. Create 3 Capsules, add Drone.cs to each",
+      "4. Set each Drone's homeBase to the Base object",
+      "5. Create 5 Spheres, add Resource.cs to each",
+      "6. Press Play and observe behavior"
+    ]
+  },
+  "verification_checklist": [
+    "3 drones spawn at start",
+    "Resources spawn around map (not near base)",
+    "Drones move towards resources",
+    "Resource charges decrease",
+    "Drones return to base when full",
+    "Resource counter increases",
+    "SPACE builds new drone (3s cooldown)",
+    "Depleted resources disappear",
+    "Drones continue with remaining resources"
+  ]
+}
