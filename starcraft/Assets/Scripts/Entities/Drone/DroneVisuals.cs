@@ -1,5 +1,6 @@
 using System.Collections;
 using Core.Enums;
+using Entities.Base;
 using UnityEngine;
 
 namespace DroneResourceCollection.Entities.Drone
@@ -37,8 +38,15 @@ namespace DroneResourceCollection.Entities.Drone
             // Получаем все рендереры дочерних объектов (для объекта Visual)
             _childRenderers = GetComponentsInChildren<Renderer>(true);
             
+            // Используем URP шейдер
+            Shader urpShader = Shader.Find("Universal Render Pipeline/Lit");
+            if (urpShader == null)
+            {
+                urpShader = Shader.Find("Standard");
+            }
+            
             // Создаем материал для дрона
-            _material = new Material(Shader.Find("Standard"));
+            _material = new Material(urpShader);
             _renderer.material = _material;
             
             // Применяем материал ко всем дочерним рендерерам
@@ -47,7 +55,7 @@ namespace DroneResourceCollection.Entities.Drone
                 if (childRenderer != _renderer)
                 {
                     // Создаем отдельный материал для каждого дочернего объекта
-                    Material childMaterial = new Material(Shader.Find("Standard"));
+                    Material childMaterial = new Material(urpShader);
                     childRenderer.material = childMaterial;
                 }
             }
@@ -62,18 +70,32 @@ namespace DroneResourceCollection.Entities.Drone
         private void Update()
         {
             UpdateStateIndicator();
+            
+            // Обновляем цвет, если база была установлена после Start()
+            if (_drone != null && _drone.HomeBase != null && _material != null)
+            {
+                // Проверяем, что цвет соответствует цвету базы (на случай, если база установилась позже)
+                Color expectedColor = GetFactionColor();
+                Color currentColor = GetMaterialColor(_material);
+                
+                // Если цвета не совпадают (с небольшой погрешностью), обновляем
+                if (Vector4.Distance((Vector4)expectedColor, (Vector4)currentColor) > 0.01f)
+                {
+                    UpdateColor();
+                }
+            }
         }
 
         private void UpdateColor()
         {
             if (_drone != null)
             {
-                Color factionColor = _drone.Faction == FactionType.Red ? _redFactionColor : _blueFactionColor;
+                Color factionColor = GetFactionColor();
                 
                 // Применяем цвет к основному рендереру
                 if (_material != null)
                 {
-                    _material.color = factionColor;
+                    SetMaterialColor(_material, factionColor);
                 }
                 
                 // Применяем цвет ко всем дочерним рендерерам (например, объект Visual)
@@ -81,10 +103,60 @@ namespace DroneResourceCollection.Entities.Drone
                 {
                     if (childRenderer != null && childRenderer.material != null)
                     {
-                        childRenderer.material.color = factionColor;
+                        SetMaterialColor(childRenderer.material, factionColor);
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Устанавливает цвет материала с поддержкой URP (_BaseColor) и стандартного шейдера (color)
+        /// </summary>
+        private void SetMaterialColor(Material material, Color color)
+        {
+            if (material.HasProperty("_BaseColor"))
+            {
+                material.SetColor("_BaseColor", color);
+            }
+            else if (material.HasProperty("_Color"))
+            {
+                material.SetColor("_Color", color);
+            }
+            else
+            {
+                material.color = color;
+            }
+        }
+
+        /// <summary>
+        /// Получает цвет фракции из базы или использует fallback
+        /// </summary>
+        private Color GetFactionColor()
+        {
+            // Пытаемся получить цвет из базы
+            if (_drone != null && _drone.HomeBase != null)
+            {
+                // Кастим IBase к Base для доступа к BaseVisuals
+                if (_drone.HomeBase is Base baseObj)
+                {
+                    BaseVisuals baseVisuals = baseObj.GetComponent<BaseVisuals>();
+                    if (baseVisuals != null)
+                    {
+                        return baseVisuals.GetFactionColor(_drone.Faction);
+                    }
+                }
+            }
+            
+            // Fallback на локальные цвета, если база еще не установлена
+            return _drone.Faction == FactionType.Red ? _redFactionColor : _blueFactionColor;
+        }
+
+        /// <summary>
+        /// Публичный метод для обновления цвета (вызывается из Drone.SetHomeBase)
+        /// </summary>
+        public void RefreshColor()
+        {
+            UpdateColor();
         }
 
         private void CreateStateIndicator()
@@ -102,10 +174,10 @@ namespace DroneResourceCollection.Entities.Drone
             {
                 // Обновляем цвет индикатора в зависимости от состояния
                 Renderer indicatorRenderer = _stateIndicator.GetComponent<Renderer>();
-                if (indicatorRenderer != null)
+                if (indicatorRenderer != null && indicatorRenderer.material != null)
                 {
                     Color stateColor = GetStateColor(_drone.CurrentState);
-                    indicatorRenderer.material.color = stateColor;
+                    SetMaterialColor(indicatorRenderer.material, stateColor);
                 }
             }
         }
@@ -119,9 +191,11 @@ namespace DroneResourceCollection.Entities.Drone
                 case DroneState.Searching:
                     return Color.yellow;
                 case DroneState.MovingToResource:
-                    return Color.cyan;
+                    // Используем цвет команды для состояния движения к ресурсу
+                    return GetFactionColor();
                 case DroneState.Collecting:
-                    return Color.magenta;
+                    // Используем цвет команды для состояния сбора
+                    return GetFactionColor();
                 case DroneState.Returning:
                     return Color.green;
                 case DroneState.Unloading:
@@ -154,7 +228,7 @@ namespace DroneResourceCollection.Entities.Drone
         {
             if (_material != null)
             {
-                Color originalColor = _material.color;
+                Color originalColor = GetMaterialColor(_material);
                 Color flashColor = originalColor * 2f; // Увеличиваем яркость
                 
                 float duration = 0.2f;
@@ -164,11 +238,30 @@ namespace DroneResourceCollection.Entities.Drone
                 {
                     elapsed += Time.deltaTime;
                     float t = elapsed / duration;
-                    _material.color = Color.Lerp(flashColor, originalColor, t);
+                    SetMaterialColor(_material, Color.Lerp(flashColor, originalColor, t));
                     yield return null;
                 }
                 
-                _material.color = originalColor;
+                SetMaterialColor(_material, originalColor);
+            }
+        }
+
+        /// <summary>
+        /// Получает цвет материала с поддержкой URP (_BaseColor) и стандартного шейдера (color)
+        /// </summary>
+        private Color GetMaterialColor(Material material)
+        {
+            if (material.HasProperty("_BaseColor"))
+            {
+                return material.GetColor("_BaseColor");
+            }
+            else if (material.HasProperty("_Color"))
+            {
+                return material.GetColor("_Color");
+            }
+            else
+            {
+                return material.color;
             }
         }
         

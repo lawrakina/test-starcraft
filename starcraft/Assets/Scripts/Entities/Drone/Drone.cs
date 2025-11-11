@@ -224,6 +224,17 @@ namespace Entities.Drone
             {
                 faction = homeBase.Faction;
             }
+            
+            // Обновляем цвета после установки базы
+            if (_visuals != null)
+            {
+                _visuals.RefreshColor();
+            }
+            
+            if (_pathRenderer != null)
+            {
+                _pathRenderer.RefreshPathColor();
+            }
         }
 
         private void OnDestroy()

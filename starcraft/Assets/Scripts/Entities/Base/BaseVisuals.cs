@@ -26,7 +26,13 @@ namespace Entities.Base
                 _renderer = gameObject.AddComponent<MeshRenderer>();
             }
 
-            _material = new Material(Shader.Find("Standard"));
+            // Используем URP шейдер
+            Shader urpShader = Shader.Find("Universal Render Pipeline/Lit");
+            if (urpShader == null)
+            {
+                urpShader = Shader.Find("Standard");
+            }
+            _material = new Material(urpShader);
             UpdateColor();
             _renderer.material = _material;
         }
@@ -35,8 +41,26 @@ namespace Entities.Base
         {
             if (_base != null && _material != null)
             {
-                _material.color = _base.Faction == FactionType.Red ? redFactionColor : blueFactionColor;
+                Color factionColor = _base.Faction == FactionType.Red ? redFactionColor : blueFactionColor;
+                
+                // Для URP используем _BaseColor, для стандартного шейдера - color
+                if (_material.HasProperty("_BaseColor"))
+                {
+                    _material.SetColor("_BaseColor", factionColor);
+                }
+                else
+                {
+                    _material.color = factionColor;
+                }
             }
+        }
+
+        /// <summary>
+        /// Получает цвет для указанной фракции
+        /// </summary>
+        public Color GetFactionColor(FactionType faction)
+        {
+            return faction == FactionType.Red ? redFactionColor : blueFactionColor;
         }
 
         private void OnDestroy()
