@@ -15,9 +15,21 @@ namespace Core.Interfaces
         
         float Speed { get; set; }
         
+        int Priority { get; }
+        
         IBase HomeBase { get; }
         
         IResource TargetResource { get; }
+        
+        /// <summary>
+        /// Проверяет, стоит ли дрон (не движется)
+        /// </summary>
+        bool IsStanding { get; }
+        
+        /// <summary>
+        /// Текущая скорость дрона
+        /// </summary>
+        Vector3 Velocity { get; }
         
         void SetTargetPosition(Vector3 position);
         

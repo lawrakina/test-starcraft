@@ -2,6 +2,7 @@ using Core.Enums;
 using Core.Events;
 using Core.Interfaces;
 using DroneResourceCollection.Entities.Drone;
+using Systems.Collision;
 using UnityEngine;
 
 namespace Entities.Drone
@@ -10,11 +11,13 @@ namespace Entities.Drone
     /// Главный компонент дрона
     /// Реализует интерфейс IDrone и координирует работу всех подсистем
     /// </summary>
+    [RequireComponent(typeof(Rigidbody))]
     [RequireComponent(typeof(DroneMovement))]
     [RequireComponent(typeof(DroneSteering))]
     [RequireComponent(typeof(DroneStateMachine))]
     [RequireComponent(typeof(DroneVisuals))]
     [RequireComponent(typeof(DronePathRenderer))]
+    [RequireComponent(typeof(DroneCollectionProgressIndicator))]
     public class Drone : MonoBehaviour, IDrone
     {
         private static int _nextId = 1;
@@ -22,6 +25,9 @@ namespace Entities.Drone
         [SerializeField] private int id;
         [SerializeField] private FactionType faction;
         [SerializeField] private IBase _homeBase;
+        
+        // Случайный приоритет для разрешения конфликтов при столкновениях
+        private int _priority;
         
         private DroneMovement _movement;
         private DroneSteering _steering;
@@ -33,11 +39,13 @@ namespace Entities.Drone
         private INavigationService _navigationService;
         private IResourceService _resourceService;
         private IDroneService _droneService;
+        private CollisionResolver _collisionResolver;
 
         public int Id => id;
         public FactionType Faction => faction;
         public DroneState CurrentState => _stateMachine != null ? _stateMachine.CurrentState : DroneState.Idle;
         public Vector3 Position => transform.position;
+        public int Priority => _priority;
         public float Speed 
         { 
             get => _movement ? _movement.Speed : 5f; 
@@ -51,6 +59,31 @@ namespace Entities.Drone
         }
         public IBase HomeBase => _homeBase;
         public IResource TargetResource => _targetResource;
+        
+        public bool IsStanding
+        {
+            get
+            {
+                if (_movement == null)
+                {
+                    return true; // Если компонент движения отсутствует, считаем что стоит
+                }
+                Vector3 velocity = _movement.Velocity;
+                return velocity.magnitude < 0.1f; // Порог для определения стоящего дрона
+            }
+        }
+        
+        public Vector3 Velocity
+        {
+            get
+            {
+                if (_movement == null)
+                {
+                    return Vector3.zero;
+                }
+                return _movement.Velocity;
+            }
+        }
 
         private void Awake()
         {
@@ -59,6 +92,9 @@ namespace Entities.Drone
             {
                 id = _nextId++;
             }
+            
+            // Генерируем случайный приоритет для разрешения конфликтов
+            _priority = Random.Range(0, 10000);
             
             // Получаем компоненты
             _movement = GetComponent<DroneMovement>();
@@ -71,14 +107,19 @@ namespace Entities.Drone
         public void Initialize(
             INavigationService navigationService,
             IResourceService resourceService,
-            IDroneService droneService)
+            IDroneService droneService,
+            CollisionResolver collisionResolver = null)
         {
             _navigationService = navigationService;
             _resourceService = resourceService;
             _droneService = droneService;
             
-            _steering.Initialize(this, _droneService);
-            _movement.Initialize(this, _navigationService, _steering.SteeringManager);
+            // Создаем общий CollisionResolver для этого дрона (или используем переданный)
+            _collisionResolver = collisionResolver ?? new CollisionResolver();
+            
+            // Инициализируем компоненты с передачей CollisionResolver и DroneService
+            _steering.Initialize(this, _droneService, _collisionResolver);
+            _movement.Initialize(this, _navigationService, _steering.SteeringManager, _droneService, _collisionResolver);
             _stateMachine.Initialize(this, _resourceService);
             
             _droneService.RegisterDrone(this);
@@ -96,7 +137,12 @@ namespace Entities.Drone
 
         public void SetTargetResource(IResource resource)
         {
+            IResource oldResource = _targetResource;
             _targetResource = resource;
+            
+            Debug.Log($"[Drone] Drone {Id} SetTargetResource: Old={(oldResource != null ? $"Resource {oldResource.Id}" : "null")}, " +
+                     $"New={(resource != null ? $"Resource {resource.Id}" : "null")}, State={CurrentState}");
+            
             if (resource != null && _movement)
             {
                 _movement.SetTargetPosition(resource.Position);
@@ -107,14 +153,59 @@ namespace Entities.Drone
         {
             if (_targetResource != null)
             {
-                _targetResource.Release();
+                int resourceId = _targetResource.Id;
+                Debug.Log($"[Drone] Drone {Id} ClearTargetResource: Clearing Resource {resourceId}, State={CurrentState}");
+                
+                // Освобождаем резервацию для фракции дрона
+                if (_targetResource is DroneResourceCollection.Entities.Resource.Resource resource)
+                {
+                    // Проверяем, что ресурс не уничтожен перед освобождением
+                    if (resource)
+                    {
+                        resource.Release(faction);
+                        Debug.Log($"[Drone] Drone {Id} released reservation for Resource {resourceId}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[Drone] Drone {Id} tried to release destroyed Resource {resourceId}");
+                    }
+                }
+                else
+                {
+                    // Для других реализаций используем старый метод
+                    _targetResource.Release();
+                }
                 _targetResource = null;
+            }
+            else
+            {
+                Debug.Log($"[Drone] Drone {Id} ClearTargetResource: No target resource to clear, State={CurrentState}");
             }
             
             if (_movement)
             {
                 _movement.ClearTarget();
             }
+        }
+        
+        /// <summary>
+        /// Проверяет, является ли целевой ресурс валидным (не null и не уничтожен)
+        /// </summary>
+        public bool IsTargetResourceValid()
+        {
+            if (_targetResource == null)
+            {
+                return false;
+            }
+            
+            // Если ресурс - MonoBehaviour, проверяем, что он не уничтожен
+            if (_targetResource is MonoBehaviour resourceMono)
+            {
+                return resourceMono != null;
+            }
+            
+            // Для других реализаций считаем валидным, если не null
+            return true;
         }
 
         public void SetShowPath(bool show)

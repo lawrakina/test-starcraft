@@ -50,14 +50,33 @@ namespace Entities.Drone
 
         private void Update()
         {
-            if (!showPath || !_lineRenderer)
+            if (!showPath || !_lineRenderer || !_droneMovement)
             {
+                if (_lineRenderer != null)
+                {
+                    _lineRenderer.positionCount = 0;
+                }
                 return;
             }
 
-            // Получаем путь из DroneMovement через рефлексию или публичное свойство
-            // Для упрощения, путь будет отрисовываться через Gizmos в DroneMovement
-            // Здесь можно добавить дополнительную логику отрисовки, если нужно
+            // Получаем путь из DroneMovement
+            var path = _droneMovement.CurrentPath;
+            
+            if (path != null && path.Count > 1)
+            {
+                // Устанавливаем количество точек для LineRenderer
+                _lineRenderer.positionCount = path.Count;
+                
+                // Устанавливаем позиции точек пути
+                for (int i = 0; i < path.Count; i++)
+                {
+                    _lineRenderer.SetPosition(i, path[i]);
+                }
+            }
+            else
+            {
+                _lineRenderer.positionCount = 0;
+            }
         }
     }
 }

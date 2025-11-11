@@ -62,6 +62,21 @@ namespace DroneResourceCollection.Systems.Steering
         {
             _behaviors.Clear();
         }
+
+        /// <summary>
+        /// Получить поведение определенного типа
+        /// </summary>
+        public T GetBehavior<T>() where T : SteeringBehavior
+        {
+            foreach (var behavior in _behaviors)
+            {
+                if (behavior is T typedBehavior)
+                {
+                    return typedBehavior;
+                }
+            }
+            return null;
+        }
     }
 }
 

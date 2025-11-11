@@ -11,7 +11,6 @@ namespace DroneResourceCollection.UI
         [SerializeField] private RawImage _minimapImage;
         [SerializeField] private Camera _minimapCamera;
         [SerializeField] private RectTransform _minimapRect;
-        [SerializeField] private float _minimapSize = 200f;
         
         private SimulationManager _simulationManager;
         private RenderTexture _minimapTexture;
@@ -62,4 +61,5 @@ namespace DroneResourceCollection.UI
         }
     }
 }
+
 

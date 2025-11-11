@@ -15,7 +15,7 @@ namespace Core.Services
             _obstacleManager = new TemporaryObstacleManager(obstacleRadius);
         }
 
-        public List<Vector3> CalculatePath(Vector3 from, Vector3 to)
+        public List<Vector3> CalculatePath(Vector3 from, Vector3 to, float segmentLength = 2.0f)
         {
             if (!GetNearestNavMeshPoint(from, out var fromNavMesh) || 
                 !GetNearestNavMeshPoint(to, out var toNavMesh))
@@ -23,7 +23,7 @@ namespace Core.Services
                 return null;
             }
             
-            return PathCalculator.CalculatePath(fromNavMesh, toNavMesh);
+            return PathCalculator.CalculatePath(fromNavMesh, toNavMesh, segmentLength);
         }
 
         public bool IsReachable(Vector3 from, Vector3 to)

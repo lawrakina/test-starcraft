@@ -11,7 +11,7 @@ namespace DroneResourceCollection.UI
     {
         [SerializeField] private Text _valueText;
         [SerializeField] private int _minValue = 1;
-        [SerializeField] private int _maxValue = 5;
+        [SerializeField] private int _maxValue = 10;
         
         private Slider _slider;
         private SimulationManager _simulationManager;
@@ -49,4 +49,5 @@ namespace DroneResourceCollection.UI
         }
     }
 }
+
 

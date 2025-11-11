@@ -1,3 +1,4 @@
+using System.Collections;
 using Core.Enums;
 using UnityEngine;
 
@@ -20,21 +21,36 @@ namespace DroneResourceCollection.Entities.Drone
         private global::Entities.Drone.Drone _drone;
         private GameObject _stateIndicator;
         private ParticleSystem _currentUnloadEffect;
+        private Renderer[] _childRenderers; // Рендереры дочерних объектов (например, Visual)
 
         private void Awake()
         {
             _drone = GetComponent<global::Entities.Drone.Drone>();
             
-            // Получаем или создаем Renderer
+            // Получаем или создаем Renderer на основном объекте
             _renderer = GetComponent<Renderer>();
             if (_renderer == null)
             {
                 _renderer = gameObject.AddComponent<MeshRenderer>();
             }
 
+            // Получаем все рендереры дочерних объектов (для объекта Visual)
+            _childRenderers = GetComponentsInChildren<Renderer>(true);
+            
             // Создаем материал для дрона
             _material = new Material(Shader.Find("Standard"));
             _renderer.material = _material;
+            
+            // Применяем материал ко всем дочерним рендерерам
+            foreach (var childRenderer in _childRenderers)
+            {
+                if (childRenderer != _renderer)
+                {
+                    // Создаем отдельный материал для каждого дочернего объекта
+                    Material childMaterial = new Material(Shader.Find("Standard"));
+                    childRenderer.material = childMaterial;
+                }
+            }
         }
 
         private void Start()
@@ -50,9 +66,24 @@ namespace DroneResourceCollection.Entities.Drone
 
         private void UpdateColor()
         {
-            if (_drone != null && _material != null)
+            if (_drone != null)
             {
-                _material.color = _drone.Faction == FactionType.Red ? _redFactionColor : _blueFactionColor;
+                Color factionColor = _drone.Faction == FactionType.Red ? _redFactionColor : _blueFactionColor;
+                
+                // Применяем цвет к основному рендереру
+                if (_material != null)
+                {
+                    _material.color = factionColor;
+                }
+                
+                // Применяем цвет ко всем дочерним рендерерам (например, объект Visual)
+                foreach (var childRenderer in _childRenderers)
+                {
+                    if (childRenderer != null && childRenderer.material != null)
+                    {
+                        childRenderer.material.color = factionColor;
+                    }
+                }
             }
         }
 
@@ -102,6 +133,7 @@ namespace DroneResourceCollection.Entities.Drone
 
         public void PlayUnloadEffect()
         {
+            // Частицы
             if (_unloadEffect != null)
             {
                 _currentUnloadEffect = Instantiate(_unloadEffect, transform.position, Quaternion.identity);
@@ -110,6 +142,57 @@ namespace DroneResourceCollection.Entities.Drone
                 // Уничтожаем эффект после завершения
                 Destroy(_currentUnloadEffect.gameObject, _currentUnloadEffect.main.duration);
             }
+            
+            // Вспышка (изменение яркости материала)
+            StartCoroutine(FlashEffect());
+            
+            // Масштаб (пульсация)
+            StartCoroutine(ScaleEffect());
+        }
+        
+        private IEnumerator FlashEffect()
+        {
+            if (_material != null)
+            {
+                Color originalColor = _material.color;
+                Color flashColor = originalColor * 2f; // Увеличиваем яркость
+                
+                float duration = 0.2f;
+                float elapsed = 0f;
+                
+                while (elapsed < duration)
+                {
+                    elapsed += Time.deltaTime;
+                    float t = elapsed / duration;
+                    _material.color = Color.Lerp(flashColor, originalColor, t);
+                    yield return null;
+                }
+                
+                _material.color = originalColor;
+            }
+        }
+        
+        private IEnumerator ScaleEffect()
+        {
+            Vector3 originalScale = transform.localScale;
+            Vector3 pulseScale = originalScale * 1.3f; // Увеличиваем масштаб на 30%
+            
+            float duration = 0.3f;
+            float elapsed = 0f;
+            
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                // Пульсация: увеличиваем, затем возвращаем
+                float scaleFactor = t < 0.5f 
+                    ? Mathf.Lerp(1f, 1.3f, t * 2f) 
+                    : Mathf.Lerp(1.3f, 1f, (t - 0.5f) * 2f);
+                transform.localScale = originalScale * scaleFactor;
+                yield return null;
+            }
+            
+            transform.localScale = originalScale;
         }
 
         private void OnDestroy()

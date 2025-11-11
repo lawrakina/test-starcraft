@@ -15,7 +15,7 @@ namespace DroneResourceCollection.Systems.Steering
         private readonly float _separationRadius;
         private readonly float _separationStrength;
 
-        public SeparationBehavior(IDrone drone, IDroneService droneService, float separationRadius = 3f, float separationStrength = 2f)
+        public SeparationBehavior(IDrone drone, IDroneService droneService, float separationRadius = 5f, float separationStrength = 5f)
         {
             _drone = drone;
             _droneService = droneService;
@@ -34,6 +34,7 @@ namespace DroneResourceCollection.Systems.Steering
             }
 
             Vector3 separationForce = Vector3.zero;
+            const float minSeparationDistance = 1.5f; // Минимальное расстояние между дронами
 
             foreach (IDrone nearbyDrone in nearbyDrones)
             {
@@ -42,14 +43,27 @@ namespace DroneResourceCollection.Systems.Steering
 
                 if (distance > 0 && distance < _separationRadius)
                 {
-                    // Нормализуем направление и применяем силу обратно пропорциональную расстоянию
-                    direction.Normalize();
-                    separationForce += direction / distance;
+                    // Если дроны очень близко, применяем экстренное отталкивание
+                    if (distance < minSeparationDistance)
+                    {
+                        // Сильное отталкивание при очень близком расстоянии
+                        direction.Normalize();
+                        separationForce += direction * (_separationStrength * 3f) / (distance + 0.1f);
+                    }
+                    else
+                    {
+                        // Обычное отталкивание
+                        direction.Normalize();
+                        separationForce += direction / distance;
+                    }
                 }
             }
 
             // Применяем силу разделения
-            separationForce = separationForce.normalized * _separationStrength * Weight;
+            if (separationForce.magnitude > 0.01f)
+            {
+                separationForce = separationForce.normalized * _separationStrength * Weight;
+            }
             
             return separationForce;
         }
