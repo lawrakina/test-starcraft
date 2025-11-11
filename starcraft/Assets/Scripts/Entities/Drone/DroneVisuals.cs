@@ -7,24 +7,31 @@ using UnityEngine;
 namespace DroneResourceCollection.Entities.Drone
 {
     [RequireComponent(typeof(global::Entities.Drone.Drone))]
-    public class DroneVisuals : MonoBehaviour
+    public class DroneVisuals : MonoBehaviour, IUpdatable
     {
         [SerializeField] private Color _redFactionColor = Color.red;
         [SerializeField] private Color _blueFactionColor = Color.blue;
         [SerializeField] private GameObject _stateIndicatorPrefab;
         [SerializeField] private ParticleSystem _unloadEffect;
+        [SerializeField] private int updatePriority = 200;
         
         private Renderer _renderer;
         private Material _material;
+        private Transform _transform;
         private global::Entities.Drone.Drone _drone;
         private GameObject _stateIndicator;
         private ParticleSystem _currentUnloadEffect;
         private Renderer[] _childRenderers;
         private DroneState _currentState;
+        private Color _cachedFactionColor;
+        private bool _colorNeedsUpdate = true;
+        
+        public int UpdatePriority => updatePriority;
 
         private void Awake()
         {
             _drone = GetComponent<global::Entities.Drone.Drone>();
+            _transform = transform;
             
             _renderer = GetComponent<Renderer>();
             if (_renderer == null)
@@ -56,10 +63,12 @@ namespace DroneResourceCollection.Entities.Drone
         private void OnEnable()
         {
             EventBus.Instance.Subscribe<DroneStateChangedEvent>(OnDroneStateChanged);
+            UpdateManager.Instance.RegisterUpdatable(this);
         }
-
+        
         private void OnDisable()
         {
+            UpdateManager.Instance.UnregisterUpdatable(this);
             EventBus.Instance.Unsubscribe<DroneStateChangedEvent>(OnDroneStateChanged);
         }
 
@@ -72,25 +81,27 @@ namespace DroneResourceCollection.Entities.Drone
 
         private void OnDroneStateChanged(DroneStateChangedEvent evt)
         {
-            if (evt.Drone != _drone)
+            if (evt.Drone == null || !ReferenceEquals(evt.Drone, _drone))
             {
                 return;
             }
 
             _currentState = evt.NewState;
+            _colorNeedsUpdate = true;
             UpdateStateIndicator();
         }
 
-        private void Update()
+        public void OnUpdate(float deltaTime)
         {
             if (_drone != null && _drone.HomeBase != null && _material != null)
             {
+                // Проверяем, изменился ли цвет фракции
                 Color expectedColor = GetFactionColor();
-                Color currentColor = GetMaterialColor(_material);
-                
-                if (Vector4.Distance((Vector4)expectedColor, (Vector4)currentColor) > 0.01f)
+                if (_colorNeedsUpdate || Vector4.Distance((Vector4)expectedColor, (Vector4)_cachedFactionColor) > 0.01f)
                 {
+                    _cachedFactionColor = expectedColor;
                     UpdateColor();
+                    _colorNeedsUpdate = false;
                 }
             }
         }
@@ -151,6 +162,7 @@ namespace DroneResourceCollection.Entities.Drone
 
         public void RefreshColor()
         {
+            _colorNeedsUpdate = true;
             UpdateColor();
         }
 
@@ -158,7 +170,7 @@ namespace DroneResourceCollection.Entities.Drone
         {
             if (_stateIndicatorPrefab != null)
             {
-                _stateIndicator = Instantiate(_stateIndicatorPrefab, transform);
+                _stateIndicator = Instantiate(_stateIndicatorPrefab, _transform);
                 _stateIndicator.transform.localPosition = Vector3.up * 2f;
             }
         }
@@ -204,7 +216,7 @@ namespace DroneResourceCollection.Entities.Drone
         {
             if (_unloadEffect != null)
             {
-                _currentUnloadEffect = Instantiate(_unloadEffect, transform.position, Quaternion.identity);
+                _currentUnloadEffect = Instantiate(_unloadEffect, _transform.position, Quaternion.identity);
                 _currentUnloadEffect.Play();
                 Destroy(_currentUnloadEffect.gameObject, _currentUnloadEffect.main.duration);
             }
@@ -253,7 +265,7 @@ namespace DroneResourceCollection.Entities.Drone
         
         private IEnumerator ScaleEffect()
         {
-            Vector3 originalScale = transform.localScale;
+            Vector3 originalScale = _transform.localScale;
             
             float duration = 0.3f;
             float elapsed = 0f;
@@ -265,11 +277,11 @@ namespace DroneResourceCollection.Entities.Drone
                 float scaleFactor = t < 0.5f 
                     ? Mathf.Lerp(1f, 1.3f, t * 2f) 
                     : Mathf.Lerp(1.3f, 1f, (t - 0.5f) * 2f);
-                transform.localScale = originalScale * scaleFactor;
+                _transform.localScale = originalScale * scaleFactor;
                 yield return null;
             }
             
-            transform.localScale = originalScale;
+            _transform.localScale = originalScale;
         }
 
         private void OnDestroy()

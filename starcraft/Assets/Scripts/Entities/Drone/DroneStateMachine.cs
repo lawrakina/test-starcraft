@@ -5,8 +5,10 @@ using UnityEngine;
 
 namespace Entities.Drone
 {
-    public class DroneStateMachine : MonoBehaviour
+    public class DroneStateMachine : MonoBehaviour, IUpdatable
     {
+        [SerializeField] private int updatePriority = 100;
+        
         private Systems.StateMachine.DroneStateMachine _stateMachine;
         private DroneIdleState _idleState;
         private DroneSearchingState _searchingState;
@@ -20,6 +22,7 @@ namespace Entities.Drone
 
         public Systems.StateMachine.DroneStateMachine StateMachine => _stateMachine;
         public DroneState CurrentState => _stateMachine?.CurrentDroneState ?? DroneState.Idle;
+        public int UpdatePriority => updatePriority;
         
         public void ForceSearchingState()
         {
@@ -60,8 +63,18 @@ namespace Entities.Drone
         private DroneState _lastCheckedState;
         private float _lastTransitionCheckTime;
         private const float TransitionCheckInterval = 0.1f;
+        
+        private void OnEnable()
+        {
+            UpdateManager.Instance.RegisterUpdatable(this);
+        }
+        
+        private void OnDisable()
+        {
+            UpdateManager.Instance.UnregisterUpdatable(this);
+        }
 
-        private void Update()
+        public void OnUpdate(float deltaTime)
         {
             if (_stateMachine == null)
             {

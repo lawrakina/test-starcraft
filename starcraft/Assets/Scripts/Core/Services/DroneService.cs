@@ -9,10 +9,19 @@ namespace Core.Services
     public class DroneService : IDroneService
     {
         private readonly Dictionary<int, IDrone> _drones = new();
+        private readonly List<IDrone> _tempDroneList = new List<IDrone>(); // Переиспользуемый список
 
         public List<IDrone> GetDronesByFaction(FactionType faction)
         {
-            return _drones.Values.Where(d => d.Faction == faction).ToList();
+            _tempDroneList.Clear();
+            foreach (var drone in _drones.Values)
+            {
+                if (drone.Faction == faction)
+                {
+                    _tempDroneList.Add(drone);
+                }
+            }
+            return new List<IDrone>(_tempDroneList);
         }
 
         public List<IDrone> GetAllDrones()
@@ -22,7 +31,7 @@ namespace Core.Services
 
         public List<IDrone> FindNearbyDrones(Vector3 position, float radius, int excludeDroneId)
         {
-            List<IDrone> nearbyDrones = new List<IDrone>();
+            _tempDroneList.Clear();
 
             foreach (var drone in _drones.Values)
             {
@@ -34,11 +43,11 @@ namespace Core.Services
                 float distance = Vector3.Distance(position, drone.Position);
                 if (distance <= radius)
                 {
-                    nearbyDrones.Add(drone);
+                    _tempDroneList.Add(drone);
                 }
             }
 
-            return nearbyDrones;
+            return new List<IDrone>(_tempDroneList);
         }
 
         public void RegisterDrone(IDrone drone)

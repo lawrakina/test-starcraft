@@ -13,11 +13,12 @@ namespace Entities.Drone
     /// Использует Rigidbody для физического движения и столкновений с террейном
     /// </summary>
     [RequireComponent(typeof(Rigidbody))]
-    public class DroneMovement : MonoBehaviour
+    public class DroneMovement : MonoBehaviour, IFixedUpdatable
     {
         [SerializeField] private float speed = 5f;
         [SerializeField] private float arrivalDistance = 0.5f;
         [SerializeField] private float rotationSpeed = 5f;
+        [SerializeField] private int fixedUpdatePriority = 50;
 
         private Vector3 _targetPosition;
         private List<Vector3> _currentPath;
@@ -26,11 +27,14 @@ namespace Entities.Drone
         private bool _hasTarget;
 
         private Rigidbody _rigidbody;
+        private Transform _transform;
         private SteeringManager _steeringManager;
         private INavigationService _navigationService;
         private IDrone _drone;
         private IDroneService _droneService;
         private CollisionResolver _collisionResolver;
+        
+        public int FixedUpdatePriority => fixedUpdatePriority;
 
         // Для обхода блокирующих дронов
         private IDrone _blockingDrone;
@@ -62,11 +66,23 @@ namespace Entities.Drone
             {
                 _rigidbody = gameObject.AddComponent<Rigidbody>();
             }
+            
+            _transform = transform;
 
             // Настраиваем Rigidbody для движения без гравитации и с ограничением вращения
             _rigidbody.useGravity = false;
             _rigidbody.freezeRotation = true;
             _rigidbody.linearDamping = 2f; // Добавляем сопротивление для плавного движения
+        }
+        
+        private void OnEnable()
+        {
+            UpdateManager.Instance.RegisterFixedUpdatable(this);
+        }
+        
+        private void OnDisable()
+        {
+            UpdateManager.Instance.UnregisterFixedUpdatable(this);
         }
 
         public void Initialize(
@@ -90,7 +106,7 @@ namespace Entities.Drone
             _currentPathIndex = 0;
             
             // Сбрасываем проверку застревания при установке новой цели
-            _lastPosition = _drone != null ? _drone.Position : transform.position;
+            _lastPosition = _drone != null ? _drone.Position : _transform.position;
             _lastPositionCheckTime = Time.fixedTime;
 
             if (_navigationService != null && _drone != null)
@@ -121,7 +137,7 @@ namespace Entities.Drone
             }
         }
 
-        private void FixedUpdate()
+        public void OnFixedUpdate(float fixedDeltaTime)
         {
             if (!_hasTarget || _currentPath == null || _currentPath.Count == 0 || _rigidbody == null)
             {
@@ -145,7 +161,7 @@ namespace Entities.Drone
             }
 
             var currentTarget = _currentPath[_currentPathIndex];
-            var direction = (currentTarget - transform.position);
+            var direction = (currentTarget - _transform.position);
             var distance = direction.magnitude;
 
             if (distance < arrivalDistance)
@@ -159,7 +175,7 @@ namespace Entities.Drone
                 }
 
                 currentTarget = _currentPath[_currentPathIndex];
-                direction = (currentTarget - transform.position);
+                direction = (currentTarget - _transform.position);
             }
 
             direction.Normalize();
@@ -168,7 +184,7 @@ namespace Entities.Drone
             Vector3 steeringForce = Vector3.zero;
             if (_steeringManager != null)
             {
-                steeringForce = _steeringManager.CalculateSteering(transform.position, _rigidbody.linearVelocity, speed);
+                steeringForce = _steeringManager.CalculateSteering(_transform.position, _rigidbody.linearVelocity, speed);
             }
 
             // Комбинируем желаемую скорость и steering force
@@ -194,8 +210,8 @@ namespace Entities.Drone
 
                 // Поворот дрона в направлении движения
                 Quaternion targetRotation = Quaternion.LookRotation(_velocity.normalized);
-                transform.rotation =
-                    Quaternion.Slerp(transform.rotation, targetRotation, Time.fixedDeltaTime * rotationSpeed);
+                _transform.rotation =
+                    Quaternion.Slerp(_transform.rotation, targetRotation, fixedDeltaTime * rotationSpeed);
             }
             else
             {

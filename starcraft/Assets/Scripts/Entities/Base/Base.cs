@@ -7,7 +7,7 @@ namespace Entities.Base
     [RequireComponent(typeof(BaseResourceCounter))]
     [RequireComponent(typeof(BaseVisuals))]
     [RequireComponent(typeof(BaseUnloadTrigger))]
-    public class Base : MonoBehaviour, IBase
+    public class Base : MonoBehaviour, IBase, IInitializable
     {
         [SerializeField] private FactionType faction;
         [SerializeField] private Transform unloadPoint;
@@ -15,14 +15,20 @@ namespace Entities.Base
 
         private BaseResourceCounter _resourceCounter;
         private BaseUnloadTrigger _unloadTrigger;
+        private Transform _transform;
+        private bool _isInitialized = false;
 
         public FactionType Faction => faction;
-        public Vector3 Position => transform.position;
-        public Vector3 UnloadPoint => unloadPoint != null ? unloadPoint.position : transform.position;
+        public Vector3 Position => _transform != null ? _transform.position : transform.position;
+        public Vector3 UnloadPoint => unloadPoint != null ? unloadPoint.position : (_transform != null ? _transform.position : transform.position);
         public int ResourceCount => _resourceCounter != null ? _resourceCounter.Count : 0;
+        
+        public int InitializationPhase => 1; // Вторая фаза - игровые системы
+        public System.Type[] Dependencies => null; // Нет зависимостей
 
         private void Awake()
         {
+            _transform = transform;
             _resourceCounter = GetComponent<BaseResourceCounter>();
             if (!_resourceCounter)
             {
@@ -31,7 +37,7 @@ namespace Entities.Base
 
             if (unloadPoint == null)
             {
-                unloadPoint = transform;
+                unloadPoint = _transform;
             }
 
             if (spawnPoints == null || spawnPoints.Length == 0)
@@ -39,8 +45,20 @@ namespace Entities.Base
                 CreateDefaultSpawnPoints();
             }
             
+            InitializationManager.Instance.RegisterInitializable(this);
+        }
+        
+        public void Initialize()
+        {
+            if (_isInitialized)
+            {
+                return;
+            }
+            
             SetupUnloadTrigger();
             ScanAndLinkUnloadTrigger();
+            
+            _isInitialized = true;
         }
         
         private void SetupUnloadTrigger()
@@ -152,7 +170,8 @@ namespace Entities.Base
                 return spawnPoints[index].position;
             }
 
-            return transform.position + Vector3.right * (index * 2f);
+            Transform transformToUse = _transform != null ? _transform : transform;
+            return transformToUse.position + Vector3.right * (index * 2f);
         }
 
         private void CreateDefaultSpawnPoints()
@@ -161,7 +180,7 @@ namespace Entities.Base
             for (int i = 0; i < 5; i++)
             {
                 GameObject spawnPoint = new GameObject($"SpawnPoint_{i}");
-                spawnPoint.transform.SetParent(transform);
+                spawnPoint.transform.SetParent(_transform);
                 float angle = (i - 2) * 15f;
                 spawnPoint.transform.localPosition = Quaternion.Euler(0, angle, 0) * Vector3.forward * 3f;
                 spawnPoints[i] = spawnPoint.transform;

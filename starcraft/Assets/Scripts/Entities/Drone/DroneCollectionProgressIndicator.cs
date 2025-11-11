@@ -5,46 +5,55 @@ using UnityEngine;
 
 namespace Entities.Drone
 {
-    public class DroneCollectionProgressIndicator : MonoBehaviour
+    public class DroneCollectionProgressIndicator : MonoBehaviour, IUpdatable
     {
         private TextMesh _textMesh;
         private GameObject _textObject;
+        private Transform _textObjectTransform;
         private global::Entities.Drone.Drone _drone;
         private DroneStateMachine _stateMachine;
         private DroneState _currentState;
         private float _lastProgressUpdateTime;
         private const float ProgressUpdateInterval = 0.1f;
+        private Camera _mainCamera;
         
         [SerializeField] private float _offsetY = 2.5f;
         [SerializeField] private Color _textColor = Color.white;
         [SerializeField] private int _fontSize = 20;
+        [SerializeField] private int updatePriority = 400;
         
         private const int ProgressBars = 10;
+        
+        public int UpdatePriority => updatePriority;
         
         private void Awake()
         {
             _drone = GetComponentInParent<global::Entities.Drone.Drone>();
             _stateMachine = GetComponentInParent<DroneStateMachine>();
+            _mainCamera = Camera.main;
             CreateTextObject();
         }
 
         private void OnEnable()
         {
             EventBus.Instance.Subscribe<DroneStateChangedEvent>(OnDroneStateChanged);
+            UpdateManager.Instance.RegisterUpdatable(this);
         }
 
         private void OnDisable()
         {
+            UpdateManager.Instance.UnregisterUpdatable(this);
             EventBus.Instance.Unsubscribe<DroneStateChangedEvent>(OnDroneStateChanged);
         }
         
         private void CreateTextObject()
         {
             _textObject = new GameObject("CollectionProgressText");
-            _textObject.transform.SetParent(transform);
-            _textObject.transform.localPosition = new Vector3(0, _offsetY, 0);
-            _textObject.transform.localRotation = Quaternion.identity;
-            _textObject.transform.localScale = Vector3.one;
+            _textObjectTransform = _textObject.transform;
+            _textObjectTransform.SetParent(transform);
+            _textObjectTransform.localPosition = new Vector3(0, _offsetY, 0);
+            _textObjectTransform.localRotation = Quaternion.identity;
+            _textObjectTransform.localScale = Vector3.one;
             
             _textMesh = _textObject.AddComponent<TextMesh>();
             _textMesh.color = _textColor;
@@ -57,7 +66,7 @@ namespace Entities.Drone
 
         private void OnDroneStateChanged(DroneStateChangedEvent evt)
         {
-            if (evt.Drone != _drone)
+            if (evt.Drone == null || !ReferenceEquals(evt.Drone, _drone))
             {
                 return;
             }
@@ -74,7 +83,7 @@ namespace Entities.Drone
             }
         }
         
-        private void Update()
+        public void OnUpdate(float deltaTime)
         {
             if (_currentState != DroneState.Collecting || _textObject == null || !_textObject.activeSelf)
             {
@@ -88,14 +97,13 @@ namespace Entities.Drone
 
             _lastProgressUpdateTime = Time.time;
             UpdateProgress();
-        }
-        
-        private void LateUpdate()
-        {
-            if (_textObject != null && Camera.main != null)
+            
+            // Обновляем поворот к камере
+            if (_textObjectTransform != null && _mainCamera != null)
             {
-                _textObject.transform.LookAt(_textObject.transform.position + Camera.main.transform.rotation * Vector3.forward,
-                    Camera.main.transform.rotation * Vector3.up);
+                Transform cameraTransform = _mainCamera.transform;
+                _textObjectTransform.LookAt(_textObjectTransform.position + cameraTransform.rotation * Vector3.forward,
+                    cameraTransform.rotation * Vector3.up);
             }
         }
         

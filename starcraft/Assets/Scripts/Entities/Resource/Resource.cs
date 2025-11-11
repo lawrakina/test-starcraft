@@ -15,12 +15,13 @@ namespace DroneResourceCollection.Entities.Resource
         
         [SerializeField] private int _id;
         private bool _isCollected;
+        private Transform _transform;
         
         // Резервации по фракциям - дроны разных фракций не видят резервации друг друга
         private readonly Dictionary<Core.Enums.FactionType, int> _reservationsByFaction = new();
 
         public int Id => _id;
-        public Vector3 Position => transform.position;
+        public Vector3 Position => _transform != null ? _transform.position : transform.position;
         public bool IsReserved 
         { 
             get => _reservationsByFaction.Count > 0; 
@@ -37,6 +38,8 @@ namespace DroneResourceCollection.Entities.Resource
 
         private void Awake()
         {
+            _transform = transform;
+            
             // Генерируем уникальный ID при создании
             if (_id == 0)
             {
@@ -142,10 +145,10 @@ namespace DroneResourceCollection.Entities.Resource
                 }
                 
                 // Прикрепляем к дрону
-                transform.SetParent(droneTransform);
-                transform.localPosition = Vector3.up * 1.5f; // Над дроном
-                transform.localRotation = Quaternion.identity;
-                transform.localScale = Vector3.one * 0.5f; // Уменьшаем размер
+                _transform.SetParent(droneTransform);
+                _transform.localPosition = Vector3.up * 1.5f; // Над дроном
+                _transform.localRotation = Quaternion.identity;
+                _transform.localScale = Vector3.one * 0.5f; // Уменьшаем размер
             }
         }
         

@@ -8,41 +8,95 @@ namespace Systems.Spawning
     /// Спавнер ресурсов
     /// Создает ресурсы в случайных позициях через заданный интервал
     /// </summary>
-    public class ResourceSpawner : MonoBehaviour
+    public class ResourceSpawner : MonoBehaviour, IUpdatable, IInitializable
     {
         [SerializeField] private GameObject resourcePrefab;
         [SerializeField] private float spawnInterval = 5f;
         [SerializeField] private int maxResources = 20;
         [SerializeField] private Bounds spawnBounds = new(Vector3.zero, new Vector3(20, 1, 20));
         [SerializeField] private LayerMask terrainLayer = -1; // Все слои по умолчанию
+        [SerializeField] private int updatePriority = 500;
+        [SerializeField] private ResourcePool resourcePool; // Опциональный пул ресурсов
         
         private float _spawnTimer;
         private SpawnPointProvider _spawnPointProvider;
         private IResourceService _resourceService;
         private INavigationService _navigationService;
         private int _currentResourceCount;
+        private Collider[] _colliderBuffer = new Collider[10];
+        private bool _isInitialized = false;
+        private bool _usePooling = false;
+        
+        public int UpdatePriority => updatePriority;
+        public int InitializationPhase => 1; // Вторая фаза - игровые системы
+        public System.Type[] Dependencies => new[] { typeof(SimulationManager) };
 
         public float SpawnInterval
         {
             get => spawnInterval;
             set => spawnInterval = Mathf.Max(0.1f, value);
         }
-
+        
+        private void Awake()
+        {
+            InitializationManager.Instance.RegisterInitializable(this);
+        }
+        
+        public void Initialize()
+        {
+            if (_isInitialized)
+            {
+                return;
+            }
+            
+            // Получаем SimulationManager через InitializationManager
+            var simulationManager = InitializationManager.Instance.GetInitialized<SimulationManager>();
+            if (simulationManager == null)
+            {
+                Debug.LogError("[ResourceSpawner] SimulationManager not found!");
+                return;
+            }
+            
+            _resourceService = simulationManager.ResourceService;
+            _navigationService = simulationManager.NavigationService;
+            _spawnPointProvider = new SpawnPointProvider(spawnBounds, -1);
+            
+            // Инициализируем пул, если он назначен
+            if (resourcePool != null)
+            {
+                resourcePool.Initialize(_resourceService, _navigationService);
+                _usePooling = true;
+            }
+            
+            _isInitialized = true;
+        }
+        
         public void Initialize(IResourceService resourceService, INavigationService navigationService)
         {
             _resourceService = resourceService;
             _navigationService = navigationService;
             _spawnPointProvider = new SpawnPointProvider(spawnBounds, -1);
+            _isInitialized = true;
+        }
+        
+        private void OnEnable()
+        {
+            UpdateManager.Instance.RegisterUpdatable(this);
+        }
+        
+        private void OnDisable()
+        {
+            UpdateManager.Instance.UnregisterUpdatable(this);
         }
 
-        private void Update()
+        public void OnUpdate(float deltaTime)
         {
             if (_resourceService == null || _resourceService.AvailableResourceCount >= maxResources)
             {
                 return;
             }
 
-            _spawnTimer += Time.deltaTime;
+            _spawnTimer += deltaTime;
 
             if (_spawnTimer >= spawnInterval)
             {
@@ -90,15 +144,27 @@ namespace Systems.Spawning
             }
 
             // Создаем ресурс в найденной позиции
-            var resourceObject = Instantiate(resourcePrefab, spawnPosition, Quaternion.identity);
+            DroneResourceCollection.Entities.Resource.Resource resource = null;
             
-            var resource = resourceObject.GetComponent<Resource>();
-            if (resource)
+            if (_usePooling && resourcePool != null)
             {
-                _resourceService.RegisterResource(resource);
-
-                _navigationService?.AddTemporaryObstacle(resourceObject);
-
+                // Используем пул
+                resource = resourcePool.GetResource(spawnPosition);
+            }
+            else
+            {
+                // Используем обычное создание
+                var resourceObject = Instantiate(resourcePrefab, spawnPosition, Quaternion.identity);
+                resource = resourceObject.GetComponent<Resource>();
+                if (resource)
+                {
+                    _resourceService.RegisterResource(resource);
+                    _navigationService?.AddTemporaryObstacle(resourceObject);
+                }
+            }
+            
+            if (resource != null)
+            {
                 _currentResourceCount++;
             }
         }
@@ -111,10 +177,10 @@ namespace Systems.Spawning
         {
             // Используем OverlapSphere для проверки столкновения с террейном
             // Радиус 0.5f должен быть достаточным для проверки столкновения
-            Collider[] colliders = Physics.OverlapSphere(position, 0.5f, terrainLayer);
+            int count = Physics.OverlapSphereNonAlloc(position, 0.5f, _colliderBuffer, terrainLayer);
             
             // Если найдены коллайдеры террейна, значит есть столкновение
-            if (colliders.Length > 0)
+            if (count > 0)
             {
                 return true;
             }

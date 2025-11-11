@@ -14,7 +14,7 @@ namespace Entities.Drone
     [RequireComponent(typeof(DroneVisuals))]
     [RequireComponent(typeof(DronePathRenderer))]
     [RequireComponent(typeof(DroneCollectionProgressIndicator))]
-    public class Drone : MonoBehaviour, IDrone
+    public class Drone : MonoBehaviour, IDrone, IInitializable
     {
         private static int _nextId = 1;
         
@@ -23,6 +23,8 @@ namespace Entities.Drone
         [SerializeField] private IBase _homeBase;
         
         private int _priority;
+        private Transform _transform;
+        private bool _isInitialized = false;
         
         private DroneMovement _movement;
         private DroneSteering _steering;
@@ -39,8 +41,11 @@ namespace Entities.Drone
         public int Id => id;
         public FactionType Faction => faction;
         public DroneState CurrentState => _stateMachine != null ? _stateMachine.CurrentState : DroneState.Idle;
-        public Vector3 Position => transform.position;
+        public Vector3 Position => _transform != null ? _transform.position : transform.position;
         public int Priority => _priority;
+        
+        public int InitializationPhase => 2; // Третья фаза - визуальные системы
+        public System.Type[] Dependencies => new[] { typeof(Base.Base) };
         public float Speed 
         { 
             get => _movement ? _movement.Speed : 5f; 
@@ -82,6 +87,8 @@ namespace Entities.Drone
 
         private void Awake()
         {
+            _transform = transform;
+            
             if (id == 0)
             {
                 id = _nextId++;
@@ -94,6 +101,31 @@ namespace Entities.Drone
             _stateMachine = GetComponent<DroneStateMachine>();
             _visuals = GetComponent<DroneVisuals>();
             _pathRenderer = GetComponent<DronePathRenderer>();
+            
+            InitializationManager.Instance.RegisterInitializable(this);
+        }
+        
+        public void Initialize()
+        {
+            if (_isInitialized)
+            {
+                return;
+            }
+            
+            // Получаем SimulationManager через InitializationManager
+            var simulationManager = InitializationManager.Instance.GetInitialized<SimulationManager>();
+            if (simulationManager == null)
+            {
+                Debug.LogWarning($"[Drone] SimulationManager not found for drone {id}, using manual initialization");
+                return;
+            }
+            
+            // Инициализируем через сервисы из SimulationManager
+            Initialize(
+                simulationManager.NavigationService,
+                simulationManager.ResourceService,
+                simulationManager.DroneService
+            );
         }
 
         public void Initialize(
@@ -115,6 +147,8 @@ namespace Entities.Drone
             _droneService.RegisterDrone(this);
             
             EventBus.Instance.Publish(new DroneSpawnedEvent(this));
+            
+            _isInitialized = true;
         }
 
         public void SetTargetPosition(Vector3 position)

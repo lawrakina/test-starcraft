@@ -15,6 +15,7 @@ namespace Systems.Collision
         
         // Время жизни конфликта (после разрешения конфликт удаляется через это время)
         private readonly Dictionary<(int, int), float> _collisionTimestamps = new Dictionary<(int, int), float>();
+        private readonly List<(int, int)> _keysToRemove = new List<(int, int)>(); // Переиспользуемый список
         private const float CollisionTimeout = 2.0f; // Конфликт считается разрешенным через 2 секунды
         
         /// <summary>
@@ -97,7 +98,7 @@ namespace Systems.Collision
         /// </summary>
         public void ClearResolvedCollisions()
         {
-            var keysToRemove = new List<(int, int)>();
+            _keysToRemove.Clear();
             
             foreach (var collisionKey in _activeCollisions)
             {
@@ -105,12 +106,12 @@ namespace Systems.Collision
                 {
                     if (Time.fixedTime - timestamp > CollisionTimeout)
                     {
-                        keysToRemove.Add(collisionKey);
+                        _keysToRemove.Add(collisionKey);
                     }
                 }
             }
             
-            foreach (var key in keysToRemove)
+            foreach (var key in _keysToRemove)
             {
                 _activeCollisions.Remove(key);
                 _collisionTimestamps.Remove(key);

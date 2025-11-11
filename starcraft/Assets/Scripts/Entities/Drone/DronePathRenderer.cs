@@ -7,15 +7,20 @@ namespace Entities.Drone
 {
     [RequireComponent(typeof(DroneMovement))]
     [RequireComponent(typeof(Drone))]
-    public class DronePathRenderer : MonoBehaviour
+    public class DronePathRenderer : MonoBehaviour, IUpdatable
     {
         [FormerlySerializedAs("_showPath")] [SerializeField] private bool showPath = true;
         [FormerlySerializedAs("_pathColor")] [SerializeField] private Color fallbackPathColor = Color.cyan;
         [FormerlySerializedAs("_pathLineWidth")] [SerializeField] private float pathLineWidth = 0.1f;
+        [SerializeField] private int updatePriority = 300;
         
         private DroneMovement _droneMovement;
         private Drone _drone;
         private LineRenderer _lineRenderer;
+        private Color _cachedFactionColor;
+        private bool _colorNeedsUpdate = true;
+        
+        public int UpdatePriority => updatePriority;
 
         public bool ShowPath
         {
@@ -52,12 +57,22 @@ namespace Entities.Drone
         {
             UpdatePathColor();
         }
+        
+        private void OnEnable()
+        {
+            UpdateManager.Instance.RegisterUpdatable(this);
+        }
+        
+        private void OnDisable()
+        {
+            UpdateManager.Instance.UnregisterUpdatable(this);
+        }
 
         private List<Vector3> _lastPath;
         private float _lastPathUpdateTime;
         private const float PathUpdateInterval = 0.1f;
 
-        private void Update()
+        public void OnUpdate(float deltaTime)
         {
             if (!showPath || !_lineRenderer || !_droneMovement)
             {
@@ -71,11 +86,11 @@ namespace Entities.Drone
             if (_drone != null && _drone.HomeBase != null && _lineRenderer != null)
             {
                 Color expectedColor = GetFactionColor();
-                Color currentColor = _lineRenderer.startColor;
-                
-                if (Vector4.Distance(expectedColor, currentColor) > 0.01f)
+                if (_colorNeedsUpdate || Vector4.Distance(expectedColor, _cachedFactionColor) > 0.01f)
                 {
+                    _cachedFactionColor = expectedColor;
                     UpdatePathColor();
+                    _colorNeedsUpdate = false;
                 }
             }
 
@@ -111,7 +126,12 @@ namespace Entities.Drone
 
             if (pathChanged)
             {
-                _lastPath = new List<Vector3>(path);
+                if (_lastPath == null)
+                {
+                    _lastPath = new List<Vector3>();
+                }
+                _lastPath.Clear();
+                _lastPath.AddRange(path);
                 _lineRenderer.positionCount = path.Count;
                 
                 for (int i = 0; i < path.Count; i++)
@@ -150,6 +170,7 @@ namespace Entities.Drone
 
         public void RefreshPathColor()
         {
+            _colorNeedsUpdate = true;
             UpdatePathColor();
         }
     }

@@ -7,7 +7,7 @@ using Systems.Spawning;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-public class SimulationManager : MonoBehaviour
+public class SimulationManager : MonoBehaviour, IInitializable
 {
     [FormerlySerializedAs("_bases")]
     [Header("References")]
@@ -25,19 +25,41 @@ public class SimulationManager : MonoBehaviour
     private IResourceService _resourceService;
     private IDroneService _droneService;
     private SimulationService _simulationService;
+    private bool _isInitialized = false;
 
     public INavigationService NavigationService => _navigationService;
     public IResourceService ResourceService => _resourceService;
     public IDroneService DroneService => _droneService;
     public SimulationService SimulationService => _simulationService;
+    
+    public int InitializationPhase => 0; // Первая фаза - системные менеджеры
+    public System.Type[] Dependencies => null; // Нет зависимостей
 
     private void Awake()
     {
+        InitializationManager.Instance.RegisterInitializable(this);
+    }
+    
+    public void Initialize()
+    {
+        if (_isInitialized)
+        {
+            return;
+        }
+        
         InitializeServices();
         InitializeSystems();
+        
+        // Спавн дронов будет вызван после инициализации всех объектов через InitializationManager
+        // или вручную после завершения инициализации
+        
+        _isInitialized = true;
     }
-
-    private void Start()
+    
+    /// <summary>
+    /// Вызывается после завершения инициализации всех объектов
+    /// </summary>
+    public void StartSimulation()
     {
         if (droneSpawner)
         {
@@ -57,9 +79,10 @@ public class SimulationManager : MonoBehaviour
     {
         FindAndInitializeResourceSpawners();
 
+        // DroneSpawner будет инициализирован через InitializationManager
+        // Но мы можем установить параметры, если они нужны до инициализации
         if (droneSpawner)
         {
-            droneSpawner.Initialize(bases, _droneService, _navigationService, _resourceService, _simulationService);
             droneSpawner.DronesPerFaction = initialDronesPerFaction;
         }
     }
