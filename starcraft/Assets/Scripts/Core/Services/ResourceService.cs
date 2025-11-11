@@ -11,10 +11,9 @@ namespace Core.Services
     public class ResourceService : IResourceService
     {
         private readonly List<IResource> _resources = new();
+        private float _lastCleanupTime;
+        private const float CleanupInterval = 1.0f;
 
-        /// <summary>
-        /// Проверяет, является ли ресурс валидным (не null и не уничтожен для Unity объектов)
-        /// </summary>
         private bool IsResourceValid(IResource resource)
         {
             if (resource == null)
@@ -22,26 +21,24 @@ namespace Core.Services
                 return false;
             }
             
-            // Если ресурс - MonoBehaviour, проверяем, что он не уничтожен
             if (resource is MonoBehaviour resourceMono)
             {
                 return resourceMono != null;
             }
             
-            // Для других реализаций считаем валидным, если не null
             return true;
         }
         
-        /// <summary>
-        /// Очищает список ресурсов от уничтоженных объектов
-        /// </summary>
         private void CleanupDestroyedResources()
         {
-            int removedCount = _resources.RemoveAll(r => !IsResourceValid(r));
-            if (removedCount > 0)
+            float currentTime = Time.time;
+            if (currentTime - _lastCleanupTime < CleanupInterval)
             {
-                Debug.Log($"[ResourceService] Cleaned up {removedCount} destroyed resources from the list");
+                return;
             }
+            
+            _lastCleanupTime = currentTime;
+            _resources.RemoveAll(r => !IsResourceValid(r));
         }
 
         public int AvailableResourceCount
@@ -55,14 +52,11 @@ namespace Core.Services
 
         public IResource FindNearestAvailableResource(Vector3 position, FactionType? faction = null)
         {
-            // Очищаем уничтоженные ресурсы перед поиском
             CleanupDestroyedResources();
             
-            // Если указана фракция, фильтруем ресурсы, игнорируя резервации других фракций
             var availableResources = _resources
                 .Where(r => 
                 {
-                    // Проверяем, что ресурс валиден (не уничтожен)
                     if (!IsResourceValid(r))
                     {
                         return false;
@@ -71,24 +65,19 @@ namespace Core.Services
                     if (r.IsCollected)
                         return false;
                     
-                    // Если указана фракция, проверяем только резервации этой фракции
                     if (faction.HasValue)
                     {
-                        // Ресурс доступен, если он не зарезервирован этой фракцией
                         if (r is Resource resource)
                         {
-                            // Дополнительная проверка на уничтожение перед доступом к методам
                             if (!IsResourceValid(resource))
                             {
                                 return false;
                             }
                             return !resource.IsReservedByFaction(faction.Value);
                         }
-                        // Для других реализаций используем старую логику
                         return !r.IsReserved;
                     }
                     
-                    // Если фракция не указана, используем старую логику
                     return !r.IsReserved;
                 })
                 .ToList();
@@ -103,7 +92,6 @@ namespace Core.Services
 
             foreach (var resource in availableResources)
             {
-                // Дополнительная проверка перед обращением к Position
                 if (!IsResourceValid(resource))
                 {
                     continue;
@@ -120,7 +108,6 @@ namespace Core.Services
                 }
                 catch (MissingReferenceException)
                 {
-                    // Ресурс был уничтожен во время итерации - пропускаем его
                     Debug.LogWarning($"[ResourceService] Resource was destroyed during search, skipping");
                     continue;
                 }

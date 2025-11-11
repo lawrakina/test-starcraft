@@ -7,10 +7,6 @@ using Systems.Spawning;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-/// <summary>
-/// Главный менеджер симуляции
-/// Инициализирует все системы, настраивает DI, управляет жизненным циклом симуляции
-/// </summary>
 public class SimulationManager : MonoBehaviour
 {
     [FormerlySerializedAs("_bases")]
@@ -18,7 +14,6 @@ public class SimulationManager : MonoBehaviour
     [SerializeField] private List<Base> bases = new();
     [SerializeField] private DroneSpawner droneSpawner;
     
-    // Список спаунеров ресурсов (заполняется автоматически при старте)
     private List<ResourceSpawner> _resourceSpawners = new();
 
     [Header("Settings")]
@@ -26,13 +21,11 @@ public class SimulationManager : MonoBehaviour
     [SerializeField] private float initialDroneSpeed = 5f;
     [SerializeField] private float initialResourceSpawnRate = 5f;
 
-    // Сервисы (DI контейнер)
     private INavigationService _navigationService;
     private IResourceService _resourceService;
     private IDroneService _droneService;
     private SimulationService _simulationService;
 
-    // Публичные свойства для доступа к сервисам
     public INavigationService NavigationService => _navigationService;
     public IResourceService ResourceService => _resourceService;
     public IDroneService DroneService => _droneService;
@@ -62,7 +55,6 @@ public class SimulationManager : MonoBehaviour
 
     private void InitializeSystems()
     {
-        // Автоматический поиск всех спаунеров ресурсов в сцене
         FindAndInitializeResourceSpawners();
 
         if (droneSpawner)
@@ -72,12 +64,8 @@ public class SimulationManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Находит все спаунеры ресурсов в сцене и инициализирует их
-    /// </summary>
     private void FindAndInitializeResourceSpawners()
     {
-        // Используем FindObjectsOfType для поиска всех ResourceSpawner в сцене
 #if UNITY_2023_1_OR_NEWER
         var foundSpawners = FindObjectsByType<ResourceSpawner>(FindObjectsSortMode.None);
 #else
@@ -100,15 +88,8 @@ public class SimulationManager : MonoBehaviour
         {
             Debug.LogWarning("No ResourceSpawner components found in the scene!");
         }
-        else
-        {
-            Debug.Log($"Found and initialized {_resourceSpawners.Count} ResourceSpawner(s) in the scene.");
-        }
     }
 
-    /// <summary>
-    /// Установить количество дронов на фракцию
-    /// </summary>
     public void SetDronesPerFaction(int count)
     {
         initialDronesPerFaction = count;
@@ -119,9 +100,6 @@ public class SimulationManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Установить скорость дронов
-    /// </summary>
     public void SetDroneSpeed(float speed)
     {
         initialDroneSpeed = speed;
@@ -132,9 +110,6 @@ public class SimulationManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Установить частоту спавна ресурсов для всех спаунеров
-    /// </summary>
     public void SetResourceSpawnRate(float interval)
     {
         initialResourceSpawnRate = interval;

@@ -5,14 +5,12 @@ using UnityEngine;
 
 namespace Systems.StateMachine.States
 {
-    /// <summary>
-    /// Состояние поиска ресурса
-    /// Дрон ищет ближайший доступный ресурс
-    /// </summary>
     public class DroneSearchingState : IDroneState
     {
         private readonly IDrone _drone;
         private readonly IResourceService _resourceService;
+        private float _lastSearchTime;
+        private const float SearchInterval = 0.5f;
 
         public DroneState StateType => DroneState.Searching;
 
@@ -25,30 +23,31 @@ namespace Systems.StateMachine.States
         public void Enter()
         {
             _drone.ClearTargetResource();
+            _lastSearchTime = 0f;
         }
 
         public void Update()
         {
-            // Ищем ресурс с учетом фракции дрона - дроны разных фракций не видят резервации друг друга
+            if (Time.time - _lastSearchTime < SearchInterval)
+            {
+                return;
+            }
+            
+            _lastSearchTime = Time.time;
             var nearestResource = _resourceService.FindNearestAvailableResource(_drone.Position, _drone.Faction);
             
             if (nearestResource != null)
             {
-                // Проверяем, что ресурс все еще валиден перед использованием
-                // Если ресурс - MonoBehaviour, проверяем, что он не уничтожен
                 if (nearestResource is MonoBehaviour resourceMono)
                 {
                     if (resourceMono == null)
                     {
-                        // Ресурс был уничтожен между поиском и использованием
                         return;
                     }
                 }
                 
-                // Пытаемся зарезервировать ресурс для фракции дрона
                 if (nearestResource is DroneResourceCollection.Entities.Resource.Resource resource)
                 {
-                    // Дополнительная проверка на уничтожение
                     if (resource == null)
                     {
                         return;
@@ -63,14 +62,11 @@ namespace Systems.StateMachine.States
                     }
                     catch (MissingReferenceException)
                     {
-                        // Ресурс был уничтожен во время резервации
-                        Debug.LogWarning($"[DroneSearchingState] Resource was destroyed during reservation for drone {_drone.Id}");
                         return;
                     }
                 }
                 else
                 {
-                    // Для других реализаций используем старый метод (обратная совместимость)
                     try
                     {
                         if (nearestResource.Reserve(_drone.Id))
@@ -80,8 +76,6 @@ namespace Systems.StateMachine.States
                     }
                     catch (MissingReferenceException)
                     {
-                        // Ресурс был уничтожен во время резервации
-                        Debug.LogWarning($"[DroneSearchingState] Resource was destroyed during reservation for drone {_drone.Id}");
                         return;
                     }
                 }
@@ -90,7 +84,6 @@ namespace Systems.StateMachine.States
 
         public void Exit()
         {
-            // При выходе из состояния поиска ничего не делаем
         }
     }
 }

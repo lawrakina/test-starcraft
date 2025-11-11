@@ -1,14 +1,11 @@
 using System.Collections;
 using Core.Enums;
+using Core.Events;
 using Entities.Base;
 using UnityEngine;
 
 namespace DroneResourceCollection.Entities.Drone
 {
-    /// <summary>
-    /// Компонент визуализации дрона
-    /// Управляет цветом, индикаторами состояния и визуальными эффектами
-    /// </summary>
     [RequireComponent(typeof(global::Entities.Drone.Drone))]
     public class DroneVisuals : MonoBehaviour
     {
@@ -22,63 +19,75 @@ namespace DroneResourceCollection.Entities.Drone
         private global::Entities.Drone.Drone _drone;
         private GameObject _stateIndicator;
         private ParticleSystem _currentUnloadEffect;
-        private Renderer[] _childRenderers; // Рендереры дочерних объектов (например, Visual)
+        private Renderer[] _childRenderers;
+        private DroneState _currentState;
 
         private void Awake()
         {
             _drone = GetComponent<global::Entities.Drone.Drone>();
             
-            // Получаем или создаем Renderer на основном объекте
             _renderer = GetComponent<Renderer>();
             if (_renderer == null)
             {
                 _renderer = gameObject.AddComponent<MeshRenderer>();
             }
 
-            // Получаем все рендереры дочерних объектов (для объекта Visual)
             _childRenderers = GetComponentsInChildren<Renderer>(true);
             
-            // Используем URP шейдер
             Shader urpShader = Shader.Find("Universal Render Pipeline/Lit");
             if (urpShader == null)
             {
                 urpShader = Shader.Find("Standard");
             }
             
-            // Создаем материал для дрона
             _material = new Material(urpShader);
             _renderer.material = _material;
             
-            // Применяем материал ко всем дочерним рендерерам
             foreach (var childRenderer in _childRenderers)
             {
                 if (childRenderer != _renderer)
                 {
-                    // Создаем отдельный материал для каждого дочернего объекта
                     Material childMaterial = new Material(urpShader);
                     childRenderer.material = childMaterial;
                 }
             }
         }
 
+        private void OnEnable()
+        {
+            EventBus.Instance.Subscribe<DroneStateChangedEvent>(OnDroneStateChanged);
+        }
+
+        private void OnDisable()
+        {
+            EventBus.Instance.Unsubscribe<DroneStateChangedEvent>(OnDroneStateChanged);
+        }
+
         private void Start()
         {
             UpdateColor();
             CreateStateIndicator();
+            _currentState = _drone != null ? _drone.CurrentState : DroneState.Idle;
+        }
+
+        private void OnDroneStateChanged(DroneStateChangedEvent evt)
+        {
+            if (evt.Drone != _drone)
+            {
+                return;
+            }
+
+            _currentState = evt.NewState;
+            UpdateStateIndicator();
         }
 
         private void Update()
         {
-            UpdateStateIndicator();
-            
-            // Обновляем цвет, если база была установлена после Start()
             if (_drone != null && _drone.HomeBase != null && _material != null)
             {
-                // Проверяем, что цвет соответствует цвету базы (на случай, если база установилась позже)
                 Color expectedColor = GetFactionColor();
                 Color currentColor = GetMaterialColor(_material);
                 
-                // Если цвета не совпадают (с небольшой погрешностью), обновляем
                 if (Vector4.Distance((Vector4)expectedColor, (Vector4)currentColor) > 0.01f)
                 {
                     UpdateColor();
@@ -92,13 +101,11 @@ namespace DroneResourceCollection.Entities.Drone
             {
                 Color factionColor = GetFactionColor();
                 
-                // Применяем цвет к основному рендереру
                 if (_material != null)
                 {
                     SetMaterialColor(_material, factionColor);
                 }
                 
-                // Применяем цвет ко всем дочерним рендерерам (например, объект Visual)
                 foreach (var childRenderer in _childRenderers)
                 {
                     if (childRenderer != null && childRenderer.material != null)
@@ -109,9 +116,6 @@ namespace DroneResourceCollection.Entities.Drone
             }
         }
 
-        /// <summary>
-        /// Устанавливает цвет материала с поддержкой URP (_BaseColor) и стандартного шейдера (color)
-        /// </summary>
         private void SetMaterialColor(Material material, Color color)
         {
             if (material.HasProperty("_BaseColor"))
@@ -128,15 +132,10 @@ namespace DroneResourceCollection.Entities.Drone
             }
         }
 
-        /// <summary>
-        /// Получает цвет фракции из базы или использует fallback
-        /// </summary>
         private Color GetFactionColor()
         {
-            // Пытаемся получить цвет из базы
             if (_drone != null && _drone.HomeBase != null)
             {
-                // Кастим IBase к Base для доступа к BaseVisuals
                 if (_drone.HomeBase is Base baseObj)
                 {
                     BaseVisuals baseVisuals = baseObj.GetComponent<BaseVisuals>();
@@ -147,13 +146,9 @@ namespace DroneResourceCollection.Entities.Drone
                 }
             }
             
-            // Fallback на локальные цвета, если база еще не установлена
             return _drone.Faction == FactionType.Red ? _redFactionColor : _blueFactionColor;
         }
 
-        /// <summary>
-        /// Публичный метод для обновления цвета (вызывается из Drone.SetHomeBase)
-        /// </summary>
         public void RefreshColor()
         {
             UpdateColor();
@@ -207,20 +202,14 @@ namespace DroneResourceCollection.Entities.Drone
 
         public void PlayUnloadEffect()
         {
-            // Частицы
             if (_unloadEffect != null)
             {
                 _currentUnloadEffect = Instantiate(_unloadEffect, transform.position, Quaternion.identity);
                 _currentUnloadEffect.Play();
-                
-                // Уничтожаем эффект после завершения
                 Destroy(_currentUnloadEffect.gameObject, _currentUnloadEffect.main.duration);
             }
             
-            // Вспышка (изменение яркости материала)
             StartCoroutine(FlashEffect());
-            
-            // Масштаб (пульсация)
             StartCoroutine(ScaleEffect());
         }
         
@@ -229,7 +218,7 @@ namespace DroneResourceCollection.Entities.Drone
             if (_material != null)
             {
                 Color originalColor = GetMaterialColor(_material);
-                Color flashColor = originalColor * 2f; // Увеличиваем яркость
+                Color flashColor = originalColor * 2f;
                 
                 float duration = 0.2f;
                 float elapsed = 0f;
@@ -246,9 +235,6 @@ namespace DroneResourceCollection.Entities.Drone
             }
         }
 
-        /// <summary>
-        /// Получает цвет материала с поддержкой URP (_BaseColor) и стандартного шейдера (color)
-        /// </summary>
         private Color GetMaterialColor(Material material)
         {
             if (material.HasProperty("_BaseColor"))
@@ -268,7 +254,6 @@ namespace DroneResourceCollection.Entities.Drone
         private IEnumerator ScaleEffect()
         {
             Vector3 originalScale = transform.localScale;
-            Vector3 pulseScale = originalScale * 1.3f; // Увеличиваем масштаб на 30%
             
             float duration = 0.3f;
             float elapsed = 0f;
@@ -277,7 +262,6 @@ namespace DroneResourceCollection.Entities.Drone
             {
                 elapsed += Time.deltaTime;
                 float t = elapsed / duration;
-                // Пульсация: увеличиваем, затем возвращаем
                 float scaleFactor = t < 0.5f 
                     ? Mathf.Lerp(1f, 1.3f, t * 2f) 
                     : Mathf.Lerp(1.3f, 1f, (t - 0.5f) * 2f);
@@ -297,4 +281,5 @@ namespace DroneResourceCollection.Entities.Drone
         }
     }
 }
+
 
