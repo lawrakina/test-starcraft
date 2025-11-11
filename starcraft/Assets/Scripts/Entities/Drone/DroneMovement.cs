@@ -77,12 +77,20 @@ namespace Entities.Drone
         
         private void OnEnable()
         {
-            UpdateManager.Instance.RegisterFixedUpdatable(this);
+            var updateManager = Core.DI.DependencyHelper.GetUpdateManager();
+            if (updateManager != null)
+            {
+                updateManager.RegisterFixedUpdatable(this);
+            }
         }
         
         private void OnDisable()
         {
-            UpdateManager.Instance.UnregisterFixedUpdatable(this);
+            var updateManager = Core.DI.DependencyHelper.GetUpdateManager();
+            if (updateManager != null)
+            {
+                updateManager.UnregisterFixedUpdatable(this);
+            }
         }
 
         public void Initialize(

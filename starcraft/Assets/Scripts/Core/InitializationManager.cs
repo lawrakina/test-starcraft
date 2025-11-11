@@ -6,70 +6,13 @@ using UnityEngine;
 /// <summary>
 /// Централизованный менеджер инициализации объектов на сцене
 /// Обеспечивает правильный порядок инициализации и установку ссылок
+/// Должен быть размещен на сцене вручную или создан через SimulationManager
 /// </summary>
 public class InitializationManager : MonoBehaviour
 {
-    private static InitializationManager _instance;
-    
     private readonly List<IInitializable> _initializables = new List<IInitializable>();
     private readonly Dictionary<Type, IInitializable> _initializablesByType = new Dictionary<Type, IInitializable>();
     private bool _isInitialized = false;
-    
-    public static InitializationManager Instance
-    {
-        get
-        {
-            if (_instance == null)
-            {
-                GameObject go = new GameObject("InitializationManager");
-                _instance = go.AddComponent<InitializationManager>();
-            }
-            return _instance;
-        }
-    }
-    
-    private void Awake()
-    {
-        if (_instance == null)
-        {
-            _instance = this;
-        }
-        else if (_instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        
-        // Находим все объекты, требующие инициализации
-        FindAllInitializables();
-        
-        // Выполняем инициализацию
-        InitializeAll();
-    }
-    
-    private void OnDisable()
-    {
-        // Очищаем singleton при остановке плей-режима
-        if (!Application.isPlaying && _instance == this)
-        {
-            _initializables.Clear();
-            _initializablesByType.Clear();
-            _isInitialized = false;
-            _instance = null;
-        }
-    }
-    
-    private void OnDestroy()
-    {
-        // Очищаем singleton при уничтожении объекта
-        if (_instance == this)
-        {
-            _initializables.Clear();
-            _initializablesByType.Clear();
-            _isInitialized = false;
-            _instance = null;
-        }
-    }
     
     /// <summary>
     /// Регистрирует объект для инициализации
@@ -137,7 +80,7 @@ public class InitializationManager : MonoBehaviour
     /// <summary>
     /// Выполняет инициализацию всех объектов в правильном порядке
     /// </summary>
-    private void InitializeAll()
+    public void InitializeAll()
     {
         if (_isInitialized)
         {
@@ -183,13 +126,6 @@ public class InitializationManager : MonoBehaviour
         
         _isInitialized = true;
         Debug.Log("[InitializationManager] All objects initialized successfully");
-        
-        // Запускаем симуляцию после завершения инициализации
-        var simulationManager = GetInitialized<SimulationManager>();
-        if (simulationManager != null)
-        {
-            simulationManager.StartSimulation();
-        }
     }
     
     /// <summary>

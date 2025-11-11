@@ -11,17 +11,29 @@ public abstract class UpdatableMonoBehaviour : MonoBehaviour, IUpdatable
     
     protected virtual void OnEnable()
     {
-        UpdateManager.Instance.RegisterUpdatable(this);
+        var updateManager = Core.DI.DependencyHelper.GetUpdateManager();
+        if (updateManager != null)
+        {
+            updateManager.RegisterUpdatable(this);
+        }
     }
     
     protected virtual void OnDisable()
     {
-        UpdateManager.Instance.UnregisterUpdatable(this);
+        var updateManager = Core.DI.DependencyHelper.GetUpdateManager();
+        if (updateManager != null)
+        {
+            updateManager.UnregisterUpdatable(this);
+        }
     }
     
     protected virtual void OnDestroy()
     {
-        UpdateManager.Instance.UnregisterUpdatable(this);
+        var updateManager = Core.DI.DependencyHelper.GetUpdateManager();
+        if (updateManager != null)
+        {
+            updateManager.UnregisterUpdatable(this);
+        }
     }
     
     /// <summary>

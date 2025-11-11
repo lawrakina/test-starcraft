@@ -62,14 +62,32 @@ namespace DroneResourceCollection.Entities.Drone
 
         private void OnEnable()
         {
-            EventBus.Instance.Subscribe<DroneStateChangedEvent>(OnDroneStateChanged);
-            UpdateManager.Instance.RegisterUpdatable(this);
+            var eventBus = Core.DI.DependencyHelper.GetEventBus();
+            if (eventBus != null)
+            {
+                eventBus.Subscribe<DroneStateChangedEvent>(OnDroneStateChanged);
+            }
+            
+            var updateManager = Core.DI.DependencyHelper.GetUpdateManager();
+            if (updateManager != null)
+            {
+                updateManager.RegisterUpdatable(this);
+            }
         }
         
         private void OnDisable()
         {
-            UpdateManager.Instance.UnregisterUpdatable(this);
-            EventBus.Instance.Unsubscribe<DroneStateChangedEvent>(OnDroneStateChanged);
+            var updateManager = Core.DI.DependencyHelper.GetUpdateManager();
+            if (updateManager != null)
+            {
+                updateManager.UnregisterUpdatable(this);
+            }
+            
+            var eventBus = Core.DI.DependencyHelper.GetEventBus();
+            if (eventBus != null)
+            {
+                eventBus.Unsubscribe<DroneStateChangedEvent>(OnDroneStateChanged);
+            }
         }
 
         private void Start()

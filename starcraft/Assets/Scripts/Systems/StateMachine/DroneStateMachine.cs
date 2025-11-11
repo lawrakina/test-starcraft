@@ -38,7 +38,8 @@ namespace Systems.StateMachine
             DroneState previous = previousState is IDroneState prev ? prev.StateType : DroneState.Idle;
             DroneState current = newState is IDroneState curr ? curr.StateType : DroneState.Idle;
             
-            EventBus.Instance.Publish(new DroneStateChangedEvent(_drone, previous, current));
+            var eventBus = Core.DI.DependencyHelper.GetEventBus();
+            eventBus?.Publish(new DroneStateChangedEvent(_drone, previous, current));
         }
     }
 

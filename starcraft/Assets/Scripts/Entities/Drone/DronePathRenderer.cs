@@ -60,12 +60,20 @@ namespace Entities.Drone
         
         private void OnEnable()
         {
-            UpdateManager.Instance.RegisterUpdatable(this);
+            var updateManager = Core.DI.DependencyHelper.GetUpdateManager();
+            if (updateManager != null)
+            {
+                updateManager.RegisterUpdatable(this);
+            }
         }
         
         private void OnDisable()
         {
-            UpdateManager.Instance.UnregisterUpdatable(this);
+            var updateManager = Core.DI.DependencyHelper.GetUpdateManager();
+            if (updateManager != null)
+            {
+                updateManager.UnregisterUpdatable(this);
+            }
         }
 
         private List<Vector3> _lastPath;

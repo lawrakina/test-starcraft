@@ -37,11 +37,6 @@ namespace Systems.Spawning
             set => spawnInterval = Mathf.Max(0.1f, value);
         }
         
-        private void Awake()
-        {
-            InitializationManager.Instance.RegisterInitializable(this);
-        }
-        
         public void Initialize()
         {
             if (_isInitialized)
@@ -49,8 +44,8 @@ namespace Systems.Spawning
                 return;
             }
             
-            // Получаем SimulationManager через InitializationManager
-            var simulationManager = InitializationManager.Instance.GetInitialized<SimulationManager>();
+            // Получаем SimulationManager
+            var simulationManager = SimulationManager.Instance;
             if (simulationManager == null)
             {
                 Debug.LogError("[ResourceSpawner] SimulationManager not found!");
@@ -69,6 +64,11 @@ namespace Systems.Spawning
             }
             
             _isInitialized = true;
+            
+            // Регистрируемся в UpdateManager после инициализации
+            RegisterWithUpdateManager();
+            
+            Debug.Log($"[ResourceSpawner] Initialized successfully. ResourceService: {_resourceService != null}, NavigationService: {_navigationService != null}");
         }
         
         public void Initialize(IResourceService resourceService, INavigationService navigationService)
@@ -81,17 +81,39 @@ namespace Systems.Spawning
         
         private void OnEnable()
         {
-            UpdateManager.Instance.RegisterUpdatable(this);
+            // Регистрируемся в UpdateManager, если он доступен
+            RegisterWithUpdateManager();
         }
         
         private void OnDisable()
         {
-            UpdateManager.Instance.UnregisterUpdatable(this);
+            var updateManager = Core.DI.DependencyHelper.GetUpdateManager();
+            if (updateManager != null)
+            {
+                updateManager.UnregisterUpdatable(this);
+            }
+        }
+        
+        private void RegisterWithUpdateManager()
+        {
+            var updateManager = Core.DI.DependencyHelper.GetUpdateManager();
+            if (updateManager != null)
+            {
+                updateManager.RegisterUpdatable(this);
+            }
         }
 
         public void OnUpdate(float deltaTime)
         {
-            if (_resourceService == null || _resourceService.AvailableResourceCount >= maxResources)
+            // Проверяем инициализацию
+            if (!_isInitialized || _resourceService == null)
+            {
+                // Пытаемся зарегистрироваться в UpdateManager, если еще не зарегистрированы
+                RegisterWithUpdateManager();
+                return;
+            }
+            
+            if (_resourceService.AvailableResourceCount >= maxResources)
             {
                 return;
             }

@@ -37,12 +37,20 @@ namespace DroneResourceCollection.Entities.Resource
         
         private void OnEnable()
         {
-            UpdateManager.Instance.RegisterUpdatable(this);
+            var updateManager = Core.DI.DependencyHelper.GetUpdateManager();
+            if (updateManager != null)
+            {
+                updateManager.RegisterUpdatable(this);
+            }
         }
         
         private void OnDisable()
         {
-            UpdateManager.Instance.UnregisterUpdatable(this);
+            var updateManager = Core.DI.DependencyHelper.GetUpdateManager();
+            if (updateManager != null)
+            {
+                updateManager.UnregisterUpdatable(this);
+            }
         }
 
         public void OnUpdate(float deltaTime)

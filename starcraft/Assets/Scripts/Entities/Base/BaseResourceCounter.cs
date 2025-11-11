@@ -20,7 +20,8 @@ namespace Entities.Base
             
             if (_base)
             {
-                EventBus.Instance.Publish(new BaseResourceUpdatedEvent(_base.Faction, _count));
+                var eventBus = Core.DI.DependencyHelper.GetEventBus();
+                eventBus?.Publish(new BaseResourceUpdatedEvent(_base.Faction, _count));
             }
         }
 
@@ -30,7 +31,8 @@ namespace Entities.Base
             
             if (_base != null)
             {
-                EventBus.Instance.Publish(new BaseResourceUpdatedEvent(_base.Faction, _count));
+                var eventBus = Core.DI.DependencyHelper.GetEventBus();
+                eventBus?.Publish(new BaseResourceUpdatedEvent(_base.Faction, _count));
             }
         }
     }

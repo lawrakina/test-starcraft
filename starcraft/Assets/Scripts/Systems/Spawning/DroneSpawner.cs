@@ -34,11 +34,6 @@ namespace Systems.Spawning
         public int InitializationPhase => 1; // Вторая фаза - игровые системы
         public System.Type[] Dependencies => new[] { typeof(SimulationManager), typeof(Entities.Base.Base) };
 
-        private void Awake()
-        {
-            InitializationManager.Instance.RegisterInitializable(this);
-        }
-        
         public void Initialize()
         {
             if (_isInitialized)
@@ -46,8 +41,8 @@ namespace Systems.Spawning
                 return;
             }
             
-            // Получаем SimulationManager через InitializationManager
-            var simulationManager = InitializationManager.Instance.GetInitialized<SimulationManager>();
+            // Получаем SimulationManager
+            var simulationManager = SimulationManager.Instance;
             if (simulationManager == null)
             {
                 Debug.LogError("[DroneSpawner] SimulationManager not found!");
@@ -79,7 +74,7 @@ namespace Systems.Spawning
             
             _isInitialized = true;
         }
-        
+
         public void Initialize(
             List<Base> bases,
             IDroneService droneService,
@@ -128,7 +123,7 @@ namespace Systems.Spawning
                 else
                 {
                     // Используем обычное создание
-                    var droneObject = Instantiate(dronePrefab, spawnPosition, Quaternion.identity);
+                var droneObject = Instantiate(dronePrefab, spawnPosition, Quaternion.identity);
                     drone = droneObject.GetComponent<Drone>();
                 }
                 
@@ -138,7 +133,7 @@ namespace Systems.Spawning
                     
                     if (!_usePooling || dronePool == null)
                     {
-                        drone.Initialize(_navigationService, _resourceService, _droneService);
+                    drone.Initialize(_navigationService, _resourceService, _droneService);
                     }
                 }
             }
@@ -159,7 +154,7 @@ namespace Systems.Spawning
                     else
                     {
                         // Обычное уничтожение
-                        Destroy(droneMono.gameObject);
+                    Destroy(droneMono.gameObject);
                     }
                 }
             }

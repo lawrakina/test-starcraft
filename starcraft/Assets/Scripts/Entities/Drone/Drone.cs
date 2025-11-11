@@ -102,7 +102,7 @@ namespace Entities.Drone
             _visuals = GetComponent<DroneVisuals>();
             _pathRenderer = GetComponent<DronePathRenderer>();
             
-            InitializationManager.Instance.RegisterInitializable(this);
+            // Регистрация происходит через SimulationManager
         }
         
         public void Initialize()
@@ -112,8 +112,8 @@ namespace Entities.Drone
                 return;
             }
             
-            // Получаем SimulationManager через InitializationManager
-            var simulationManager = InitializationManager.Instance.GetInitialized<SimulationManager>();
+            // Получаем SimulationManager
+            var simulationManager = SimulationManager.Instance;
             if (simulationManager == null)
             {
                 Debug.LogWarning($"[Drone] SimulationManager not found for drone {id}, using manual initialization");
@@ -146,7 +146,8 @@ namespace Entities.Drone
             
             _droneService.RegisterDrone(this);
             
-            EventBus.Instance.Publish(new DroneSpawnedEvent(this));
+            var eventBus = Core.DI.DependencyHelper.GetEventBus();
+            eventBus?.Publish(new DroneSpawnedEvent(this));
             
             _isInitialized = true;
         }

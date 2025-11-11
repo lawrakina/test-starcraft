@@ -45,7 +45,7 @@ namespace Entities.Base
                 CreateDefaultSpawnPoints();
             }
             
-            InitializationManager.Instance.RegisterInitializable(this);
+            // Регистрация происходит через SimulationManager
         }
         
         public void Initialize()

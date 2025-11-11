@@ -4,12 +4,13 @@ using UnityEngine;
 
 namespace Core.Events
 {
+    /// <summary>
+    /// Система событий для слабой связанности компонентов
+    /// Должен быть создан и зарегистрирован через DI контейнер
+    /// </summary>
     public class EventBus
     {
-        private static EventBus _instance;
         private readonly Dictionary<Type, List<object>> _subscribers = new();
-
-        public static EventBus Instance => _instance ??= new EventBus();
 
         public void Subscribe<T>(Action<T> handler) where T : class
         {

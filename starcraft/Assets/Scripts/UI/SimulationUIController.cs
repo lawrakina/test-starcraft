@@ -25,7 +25,11 @@ namespace DroneResourceCollection.UI
         private void Start()
         {
             // Подписываемся на события
-            EventBus.Instance.Subscribe<BaseResourceUpdatedEvent>(OnResourceUpdated);
+            var eventBus = Core.DI.DependencyHelper.GetEventBus();
+            if (eventBus != null)
+            {
+                eventBus.Subscribe<BaseResourceUpdatedEvent>(OnResourceUpdated);
+            }
             
             // Инициализируем UI компоненты
             InitializeUIComponents();
@@ -84,7 +88,11 @@ namespace DroneResourceCollection.UI
 
         private void OnDestroy()
         {
-            EventBus.Instance.Unsubscribe<BaseResourceUpdatedEvent>(OnResourceUpdated);
+            var eventBus = Core.DI.DependencyHelper.GetEventBus();
+            if (eventBus != null)
+            {
+                eventBus.Unsubscribe<BaseResourceUpdatedEvent>(OnResourceUpdated);
+            }
         }
     }
 }

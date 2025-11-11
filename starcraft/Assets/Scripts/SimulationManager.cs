@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Core.DI;
 using Core.Events;
 using Core.Interfaces;
 using Core.Services;
@@ -7,12 +8,18 @@ using Systems.Spawning;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-public class SimulationManager : MonoBehaviour, IInitializable
+/// <summary>
+/// Главная точка входа в симуляцию
+/// Инициализирует все системы, создает менеджеры и управляет жизненным циклом
+/// </summary>
+public class SimulationManager : MonoBehaviour
 {
     [FormerlySerializedAs("_bases")]
     [Header("References")]
     [SerializeField] private List<Base> bases = new();
     [SerializeField] private DroneSpawner droneSpawner;
+    [SerializeField] private UpdateManager updateManager;
+    [SerializeField] private InitializationManager initializationManager;
     
     private List<ResourceSpawner> _resourceSpawners = new();
 
@@ -21,45 +28,153 @@ public class SimulationManager : MonoBehaviour, IInitializable
     [SerializeField] private float initialDroneSpeed = 5f;
     [SerializeField] private float initialResourceSpawnRate = 5f;
 
+    private ServiceContainer _serviceContainer;
     private INavigationService _navigationService;
     private IResourceService _resourceService;
     private IDroneService _droneService;
     private SimulationService _simulationService;
+    private EventBus _eventBus;
     private bool _isInitialized = false;
 
+    private static SimulationManager _currentInstance;
+    
+    public static SimulationManager Instance => _currentInstance;
+    
+    public ServiceContainer ServiceContainer => _serviceContainer;
     public INavigationService NavigationService => _navigationService;
     public IResourceService ResourceService => _resourceService;
     public IDroneService DroneService => _droneService;
     public SimulationService SimulationService => _simulationService;
-    
-    public int InitializationPhase => 0; // Первая фаза - системные менеджеры
-    public System.Type[] Dependencies => null; // Нет зависимостей
+    public EventBus EventBus => _eventBus;
+    public UpdateManager UpdateManager => updateManager;
+    public InitializationManager InitializationManager => initializationManager;
 
     private void Awake()
     {
-        InitializationManager.Instance.RegisterInitializable(this);
+        // Устанавливаем текущий экземпляр (не синглтон, просто точка доступа)
+        if (_currentInstance == null)
+        {
+            _currentInstance = this;
+        }
+        else if (_currentInstance != this)
+        {
+            Debug.LogWarning("[SimulationManager] Multiple instances found! Destroying duplicate.");
+            Destroy(gameObject);
+            return;
+        }
+        
+        // Инициализируем все системы
+        Initialize();
     }
     
-    public void Initialize()
+    private void Initialize()
     {
         if (_isInitialized)
         {
             return;
         }
         
+        // Создаем DI контейнер
+        _serviceContainer = new ServiceContainer();
+        
+        // Создаем и регистрируем EventBus
+        _eventBus = new EventBus();
+        _serviceContainer.Register<EventBus>(_eventBus);
+        
+        // Создаем менеджеры, если они не назначены
+        EnsureManagersExist();
+        
+        // Инициализируем сервисы
         InitializeServices();
+        
+        // Регистрируем все в DI контейнере
+        RegisterServices();
+        
+        // Инициализируем системы
         InitializeSystems();
         
-        // Спавн дронов будет вызван после инициализации всех объектов через InitializationManager
-        // или вручную после завершения инициализации
+        // Находим и регистрируем все IInitializable объекты
+        RegisterInitializables();
+        
+        // Выполняем инициализацию всех объектов
+        if (initializationManager != null)
+        {
+            initializationManager.InitializeAll();
+        }
+        
+        // Находим ResourceSpawner после инициализации и устанавливаем параметры
+        FindAndInitializeResourceSpawners();
+        
+        // Запускаем симуляцию
+        StartSimulation();
         
         _isInitialized = true;
+        Debug.Log("[SimulationManager] Initialization complete");
+    }
+    
+    /// <summary>
+    /// Создает менеджеры, если они не назначены в инспекторе
+    /// </summary>
+    private void EnsureManagersExist()
+    {
+        if (updateManager == null)
+        {
+            GameObject updateManagerGO = new GameObject("UpdateManager");
+            updateManagerGO.transform.SetParent(transform);
+            updateManager = updateManagerGO.AddComponent<UpdateManager>();
+        }
+        
+        if (initializationManager == null)
+        {
+            GameObject initManagerGO = new GameObject("InitializationManager");
+            initManagerGO.transform.SetParent(transform);
+            initializationManager = initManagerGO.AddComponent<InitializationManager>();
+        }
+        
+        // Регистрируем менеджеры в DI
+        _serviceContainer.Register<UpdateManager>(updateManager);
+        _serviceContainer.Register<InitializationManager>(initializationManager);
+    }
+    
+    /// <summary>
+    /// Регистрирует все сервисы в DI контейнере
+    /// </summary>
+    private void RegisterServices()
+    {
+        _serviceContainer.Register<INavigationService>(_navigationService);
+        _serviceContainer.Register<IResourceService>(_resourceService);
+        _serviceContainer.Register<IDroneService>(_droneService);
+        _serviceContainer.Register<SimulationService>(_simulationService);
+        _serviceContainer.Register<SimulationManager>(this);
+    }
+    
+    /// <summary>
+    /// Регистрирует все IInitializable объекты в InitializationManager
+    /// </summary>
+    private void RegisterInitializables()
+    {
+        if (initializationManager == null) return;
+        
+        // Находим все IInitializable объекты на сцене
+#if UNITY_2023_1_OR_NEWER
+        MonoBehaviour[] allMonoBehaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+#else
+        MonoBehaviour[] allMonoBehaviours = FindObjectsOfType<MonoBehaviour>();
+#endif
+        
+        foreach (var mb in allMonoBehaviours)
+        {
+            if (mb is IInitializable initializable && mb != this)
+            {
+                initializationManager.RegisterInitializable(initializable);
+            }
+        }
     }
     
     /// <summary>
     /// Вызывается после завершения инициализации всех объектов
     /// </summary>
-    public void StartSimulation()
+    private void StartSimulation()
     {
         if (droneSpawner)
         {
@@ -77,8 +192,6 @@ public class SimulationManager : MonoBehaviour, IInitializable
 
     private void InitializeSystems()
     {
-        FindAndInitializeResourceSpawners();
-
         // DroneSpawner будет инициализирован через InitializationManager
         // Но мы можем установить параметры, если они нужны до инициализации
         if (droneSpawner)
@@ -101,7 +214,6 @@ public class SimulationManager : MonoBehaviour, IInitializable
         {
             if (spawner != null)
             {
-                spawner.Initialize(_resourceService, _navigationService);
                 spawner.SpawnInterval = initialResourceSpawnRate;
                 _resourceSpawners.Add(spawner);
             }
@@ -147,6 +259,19 @@ public class SimulationManager : MonoBehaviour, IInitializable
 
     private void OnDestroy()
     {
-        EventBus.Instance.Clear();
+        if (_currentInstance == this)
+        {
+            _currentInstance = null;
+        }
+        
+        if (_eventBus != null)
+        {
+            _eventBus.Clear();
+        }
+        
+        if (_serviceContainer != null)
+        {
+            _serviceContainer.Clear();
+        }
     }
 }

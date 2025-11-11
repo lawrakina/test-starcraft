@@ -47,7 +47,8 @@ namespace Systems.StateMachine.States
                         }
                     }
                     
-                    EventBus.Instance.Publish(new ResourceCollectedEvent(_drone, resource, _drone.Faction));
+                    var eventBus = Core.DI.DependencyHelper.GetEventBus();
+                    eventBus?.Publish(new ResourceCollectedEvent(_drone, resource, _drone.Faction));
                 }
             }
         }
