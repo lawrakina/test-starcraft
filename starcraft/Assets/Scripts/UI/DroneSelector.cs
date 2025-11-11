@@ -16,10 +16,17 @@ namespace DroneResourceCollection.UI
         private SimulationManager _simulationManager;
         private IDrone _selectedDrone;
         private List<IDrone> _allDrones = new List<IDrone>();
+        private RTSCameraController _rtsCameraController;
 
         public void Initialize(SimulationManager simulationManager)
         {
             _simulationManager = simulationManager;
+            
+            // Находим RTSCameraController на камере для проверки активности
+            if (_camera != null)
+            {
+                _rtsCameraController = _camera.GetComponent<RTSCameraController>();
+            }
             
             if (_droneDropdown != null)
             {
@@ -31,6 +38,12 @@ namespace DroneResourceCollection.UI
 
         private void Update()
         {
+            // Проверяем, активно ли RTS управление - если да, не следим за дроном
+            if (_rtsCameraController != null && _rtsCameraController.IsRTSControlEnabled())
+            {
+                return;
+            }
+            
             // Обновляем позицию камеры для слежения за выбранным дроном
             if (_selectedDrone != null && _camera != null)
             {
