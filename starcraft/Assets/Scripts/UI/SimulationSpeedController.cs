@@ -4,7 +4,7 @@ using UnityEngine.UI;
 namespace DroneResourceCollection.UI
 {
     /// <summary>
-    /// Контроллер управления скоростью симуляции (опциональная функция)
+    /// Контроллер скорости симуляции
     /// </summary>
     [RequireComponent(typeof(Slider))]
     public class SimulationSpeedController : MonoBehaviour
@@ -43,7 +43,6 @@ namespace DroneResourceCollection.UI
 
         private void OnDestroy()
         {
-            // Сбрасываем скорость времени при уничтожении
             Time.timeScale = 1f;
         }
     }

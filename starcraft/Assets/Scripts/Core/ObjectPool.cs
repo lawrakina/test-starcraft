@@ -3,7 +3,6 @@ using UnityEngine;
 
 /// <summary>
 /// Базовый класс для пула объектов
-/// Управляет переиспользованием объектов для оптимизации производительности
 /// </summary>
 public class ObjectPool : MonoBehaviour
 {
@@ -27,7 +26,7 @@ public class ObjectPool : MonoBehaviour
     }
     
     /// <summary>
-    /// Инициализирует пул, создавая начальное количество объектов
+    /// Инициализирует пул
     /// </summary>
     protected virtual void InitializePool()
     {
@@ -40,7 +39,7 @@ public class ObjectPool : MonoBehaviour
     }
     
     /// <summary>
-    /// Создает новый объект для пула
+    /// Создает объект для пула
     /// </summary>
     protected virtual GameObject CreatePooledObject()
     {
@@ -56,23 +55,20 @@ public class ObjectPool : MonoBehaviour
     {
         GameObject obj = null;
         
-        // Пытаемся получить объект из пула
         while (_pool.Count > 0 && obj == null)
         {
             obj = _pool.Dequeue();
             if (obj == null)
             {
-                continue; // Объект был уничтожен
+                continue;
             }
         }
         
-        // Если пул пуст и разрешено расширение, создаем новый объект
         if (obj == null && expandOnDemand && (_pool.Count + _activeObjects.Count) < maxSize)
         {
             obj = CreatePooledObject();
         }
         
-        // Если все еще нет объекта, возвращаем null
         if (obj == null)
         {
             Debug.LogWarning($"[ObjectPool] Pool exhausted for {prefab.name}. Max size: {maxSize}");
@@ -104,20 +100,18 @@ public class ObjectPool : MonoBehaviour
         _activeObjects.Remove(obj);
         obj.SetActive(false);
         
-        // Проверяем, не превышен ли максимальный размер
         if (_pool.Count < maxSize)
         {
             _pool.Enqueue(obj);
         }
         else
         {
-            // Уничтожаем объект, если пул переполнен
             Destroy(obj);
         }
     }
     
     /// <summary>
-    /// Очищает пул, уничтожая все объекты
+    /// Очищает пул
     /// </summary>
     public virtual void Clear()
     {
@@ -142,12 +136,12 @@ public class ObjectPool : MonoBehaviour
     }
     
     /// <summary>
-    /// Получает количество активных объектов
+    /// Количество активных объектов
     /// </summary>
     public int ActiveCount => _activeObjects.Count;
     
     /// <summary>
-    /// Получает количество объектов в пуле
+    /// Количество объектов в пуле
     /// </summary>
     public int PooledCount => _pool.Count;
     

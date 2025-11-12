@@ -9,8 +9,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 /// <summary>
-/// Главная точка входа в симуляцию
-/// Инициализирует все системы, создает менеджеры и управляет жизненным циклом
+/// Инициализирует системы симуляции
 /// </summary>
 public class SimulationManager : MonoBehaviour
 {
@@ -51,7 +50,7 @@ public class SimulationManager : MonoBehaviour
 
     private void Awake()
     {
-        // Устанавливаем текущий экземпляр (не синглтон, просто точка доступа)
+        // Точка доступа к экземпляру
         if (_currentInstance == null)
         {
             _currentInstance = this;
@@ -63,7 +62,6 @@ public class SimulationManager : MonoBehaviour
             return;
         }
         
-        // Инициализируем все системы
         Initialize();
     }
     
@@ -74,38 +72,21 @@ public class SimulationManager : MonoBehaviour
             return;
         }
         
-        // Создаем DI контейнер
         _serviceContainer = new ServiceContainer();
-        
-        // Создаем и регистрируем EventBus
         _eventBus = new EventBus();
         _serviceContainer.Register<EventBus>(_eventBus);
         
-        // Создаем менеджеры, если они не назначены
         EnsureManagersExist();
-        
-        // Инициализируем сервисы
         InitializeServices();
-        
-        // Регистрируем все в DI контейнере
         RegisterServices();
-        
-        // Инициализируем системы
         InitializeSystems();
-        
-        // Находим и регистрируем все IInitializable объекты
         RegisterInitializables();
-        
-        // Выполняем инициализацию всех объектов
         if (initializationManager != null)
         {
             initializationManager.InitializeAll();
         }
         
-        // Находим ResourceSpawner после инициализации и устанавливаем параметры
         FindAndInitializeResourceSpawners();
-        
-        // Запускаем симуляцию
         StartSimulation();
         
         _isInitialized = true;
@@ -113,7 +94,7 @@ public class SimulationManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Создает менеджеры, если они не назначены в инспекторе
+    /// Создает менеджеры при необходимости
     /// </summary>
     private void EnsureManagersExist()
     {
@@ -131,13 +112,12 @@ public class SimulationManager : MonoBehaviour
             initializationManager = initManagerGO.AddComponent<InitializationManager>();
         }
         
-        // Регистрируем менеджеры в DI
         _serviceContainer.Register<UpdateManager>(updateManager);
         _serviceContainer.Register<InitializationManager>(initializationManager);
     }
     
     /// <summary>
-    /// Регистрирует все сервисы в DI контейнере
+    /// Регистрирует сервисы в DI
     /// </summary>
     private void RegisterServices()
     {
@@ -149,13 +129,12 @@ public class SimulationManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Регистрирует все IInitializable объекты в InitializationManager
+    /// Регистрирует IInitializable объекты
     /// </summary>
     private void RegisterInitializables()
     {
         if (initializationManager == null) return;
         
-        // Находим все IInitializable объекты на сцене
 #if UNITY_2023_1_OR_NEWER
         MonoBehaviour[] allMonoBehaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
 #else
@@ -172,7 +151,7 @@ public class SimulationManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Вызывается после завершения инициализации всех объектов
+    /// Запускает симуляцию
     /// </summary>
     private void StartSimulation()
     {
@@ -192,8 +171,6 @@ public class SimulationManager : MonoBehaviour
 
     private void InitializeSystems()
     {
-        // DroneSpawner будет инициализирован через InitializationManager
-        // Но мы можем установить параметры, если они нужны до инициализации
         if (droneSpawner)
         {
             droneSpawner.DronesPerFaction = initialDronesPerFaction;

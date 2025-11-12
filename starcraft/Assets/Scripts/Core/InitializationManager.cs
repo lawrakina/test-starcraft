@@ -4,9 +4,7 @@ using System.Linq;
 using UnityEngine;
 
 /// <summary>
-/// Централизованный менеджер инициализации объектов на сцене
-/// Обеспечивает правильный порядок инициализации и установку ссылок
-/// Должен быть размещен на сцене вручную или создан через SimulationManager
+/// Менеджер инициализации объектов на сцене
 /// </summary>
 public class InitializationManager : MonoBehaviour
 {
@@ -15,7 +13,7 @@ public class InitializationManager : MonoBehaviour
     private bool _isInitialized = false;
     
     /// <summary>
-    /// Регистрирует объект для инициализации
+    /// Регистрирует объект
     /// </summary>
     public void RegisterInitializable(IInitializable initializable)
     {
@@ -29,7 +27,6 @@ public class InitializationManager : MonoBehaviour
         {
             _initializables.Add(initializable);
             
-            // Сохраняем по типу для поиска зависимостей
             Type type = initializable.GetType();
             if (!_initializablesByType.ContainsKey(type))
             {
@@ -39,7 +36,7 @@ public class InitializationManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Получает инициализированный объект по типу
+    /// Получает объект по типу
     /// </summary>
     public T GetInitialized<T>() where T : class, IInitializable
     {
@@ -52,14 +49,13 @@ public class InitializationManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Находит все объекты на сцене, реализующие IInitializable
+    /// Находит все объекты на сцене
     /// </summary>
     private void FindAllInitializables()
     {
         _initializables.Clear();
         _initializablesByType.Clear();
         
-        // Находим все MonoBehaviour на сцене
 #if UNITY_2023_1_OR_NEWER
         MonoBehaviour[] allMonoBehaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
 #else
@@ -78,7 +74,7 @@ public class InitializationManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Выполняет инициализацию всех объектов в правильном порядке
+    /// Выполняет инициализацию всех объектов
     /// </summary>
     public void InitializeAll()
     {
@@ -88,15 +84,11 @@ public class InitializationManager : MonoBehaviour
             return;
         }
         
-        // Сортируем по фазе инициализации
         var sorted = _initializables.OrderBy(x => x.InitializationPhase).ToList();
-        
-        // Инициализируем с учетом зависимостей
         HashSet<IInitializable> initialized = new HashSet<IInitializable>();
         
         foreach (var initializable in sorted)
         {
-            // Проверяем зависимости
             if (initializable.Dependencies != null && initializable.Dependencies.Length > 0)
             {
                 foreach (var dependencyType in initializable.Dependencies)
@@ -111,7 +103,6 @@ public class InitializationManager : MonoBehaviour
                 }
             }
             
-            // Инициализируем объект
             try
             {
                 initializable.Initialize();
@@ -129,7 +120,7 @@ public class InitializationManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Принудительно переинициализирует все объекты
+    /// Переинициализирует все объекты
     /// </summary>
     public void Reinitialize()
     {

@@ -5,15 +5,14 @@ namespace DroneResourceCollection.Systems.Steering
 {
     /// <summary>
     /// Менеджер Steering Behaviors
-    /// Комбинирует несколько behaviors для получения итогового steering force
     /// </summary>
     public class SteeringManager
     {
         private readonly List<SteeringBehavior> _behaviors = new List<SteeringBehavior>();
 
-        /// <summary>
-        /// Добавить поведение
-        /// </summary>
+    /// <summary>
+    /// Добавляет поведение
+    /// </summary>
         public void AddBehavior(SteeringBehavior behavior)
         {
             if (behavior != null && !_behaviors.Contains(behavior))
@@ -22,21 +21,17 @@ namespace DroneResourceCollection.Systems.Steering
             }
         }
 
-        /// <summary>
-        /// Удалить поведение
-        /// </summary>
+    /// <summary>
+    /// Удаляет поведение
+    /// </summary>
         public void RemoveBehavior(SteeringBehavior behavior)
         {
             _behaviors.Remove(behavior);
         }
 
-        /// <summary>
-        /// Вычислить итоговый steering force, комбинируя все поведения
-        /// </summary>
-        /// <param name="position">Текущая позиция</param>
-        /// <param name="velocity">Текущая скорость</param>
-        /// <param name="maxSpeed">Максимальная скорость</param>
-        /// <returns>Итоговый steering force</returns>
+    /// <summary>
+    /// Вычисляет итоговый steering force
+    /// </summary>
         public Vector3 CalculateSteering(Vector3 position, Vector3 velocity, float maxSpeed)
         {
             Vector3 totalForce = Vector3.zero;
@@ -46,7 +41,6 @@ namespace DroneResourceCollection.Systems.Steering
                 totalForce += behavior.Calculate(position, velocity, maxSpeed);
             }
 
-            // Ограничиваем максимальную силу
             if (totalForce.magnitude > maxSpeed)
             {
                 totalForce = totalForce.normalized * maxSpeed;
@@ -55,17 +49,17 @@ namespace DroneResourceCollection.Systems.Steering
             return totalForce;
         }
 
-        /// <summary>
-        /// Очистить все поведения
-        /// </summary>
+    /// <summary>
+    /// Очищает все поведения
+    /// </summary>
         public void Clear()
         {
             _behaviors.Clear();
         }
 
-        /// <summary>
-        /// Получить поведение определенного типа
-        /// </summary>
+    /// <summary>
+    /// Получает поведение определенного типа
+    /// </summary>
         public T GetBehavior<T>() where T : SteeringBehavior
         {
             foreach (var behavior in _behaviors)

@@ -6,17 +6,13 @@ namespace Systems.Collision
 {
     /// <summary>
     /// Разрешитель столкновений между дронами
-    /// Обеспечивает совместное принятие решений о том, кто уступает дорогу
     /// </summary>
     public class CollisionResolver
     {
-        // Хранит активные конфликты (пары дронов)
         private readonly HashSet<(int, int)> _activeCollisions = new HashSet<(int, int)>();
-        
-        // Время жизни конфликта (после разрешения конфликт удаляется через это время)
         private readonly Dictionary<(int, int), float> _collisionTimestamps = new Dictionary<(int, int), float>();
-        private readonly List<(int, int)> _keysToRemove = new List<(int, int)>(); // Переиспользуемый список
-        private const float CollisionTimeout = 2.0f; // Конфликт считается разрешенным через 2 секунды
+        private readonly List<(int, int)> _keysToRemove = new List<(int, int)>();
+        private const float CollisionTimeout = 2.0f;
         
         /// <summary>
         /// Регистрирует столкновение между двумя дронами
@@ -30,7 +26,6 @@ namespace Systems.Collision
                 return;
             }
             
-            // Создаем упорядоченную пару (меньший ID всегда первый)
             var collisionKey = GetCollisionKey(drone1.Id, drone2.Id);
             _activeCollisions.Add(collisionKey);
             _collisionTimestamps[collisionKey] = Time.fixedTime;
@@ -54,10 +49,7 @@ namespace Systems.Collision
                 return false;
             }
             
-            // Регистрируем столкновение
             RegisterCollision(drone1, drone2);
-            
-            // Используем PriorityCalculator для детерминированного решения
             bool shouldYield = PriorityCalculator.ShouldYield(drone1, velocity1, drone2, velocity2);
             
             return shouldYield;
@@ -78,12 +70,10 @@ namespace Systems.Collision
                 return false;
             }
             
-            // Проверяем, не истек ли таймаут
             if (_collisionTimestamps.TryGetValue(collisionKey, out float timestamp))
             {
                 if (Time.fixedTime - timestamp > CollisionTimeout)
                 {
-                    // Конфликт разрешен, удаляем его
                     _activeCollisions.Remove(collisionKey);
                     _collisionTimestamps.Remove(collisionKey);
                     return false;
@@ -93,9 +83,9 @@ namespace Systems.Collision
             return true;
         }
         
-        /// <summary>
-        /// Очищает разрешенные столкновения (устаревшие конфликты)
-        /// </summary>
+    /// <summary>
+    /// Очищает разрешенные столкновения
+    /// </summary>
         public void ClearResolvedCollisions()
         {
             _keysToRemove.Clear();
@@ -118,18 +108,18 @@ namespace Systems.Collision
             }
         }
         
-        /// <summary>
-        /// Очищает все столкновения (например, при перезапуске)
-        /// </summary>
+    /// <summary>
+    /// Очищает все столкновения
+    /// </summary>
         public void ClearAllCollisions()
         {
             _activeCollisions.Clear();
             _collisionTimestamps.Clear();
         }
         
-        /// <summary>
-        /// Создает упорядоченный ключ для пары дронов (меньший ID всегда первый)
-        /// </summary>
+    /// <summary>
+    /// Создает упорядоченный ключ для пары дронов
+    /// </summary>
         private (int, int) GetCollisionKey(int id1, int id2)
         {
             return id1 < id2 ? (id1, id2) : (id2, id1);

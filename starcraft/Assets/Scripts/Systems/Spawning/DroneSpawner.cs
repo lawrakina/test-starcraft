@@ -9,13 +9,12 @@ namespace Systems.Spawning
 {
     /// <summary>
     /// Спавнер дронов
-    /// Создает дронов для каждой фракции на их базах
     /// </summary>
     public class DroneSpawner : MonoBehaviour, IInitializable
     {
         [SerializeField] private GameObject dronePrefab;
         [SerializeField] private int dronesPerFaction = 3;
-        [SerializeField] private DronePool dronePool; // Опциональный пул дронов
+        [SerializeField] private DronePool dronePool;
         
         private List<Base> _bases = new();
         private IDroneService _droneService;
@@ -41,7 +40,6 @@ namespace Systems.Spawning
                 return;
             }
             
-            // Получаем SimulationManager
             var simulationManager = SimulationManager.Instance;
             if (simulationManager == null)
             {
@@ -49,7 +47,6 @@ namespace Systems.Spawning
                 return;
             }
             
-            // Получаем базы из SimulationManager или находим их на сцене
             if (_bases == null || _bases.Count == 0)
             {
 #if UNITY_2023_1_OR_NEWER
@@ -65,7 +62,6 @@ namespace Systems.Spawning
             _resourceService = simulationManager.ResourceService;
             _simulationService = simulationManager.SimulationService;
             
-            // Инициализируем пул, если он назначен
             if (dronePool != null)
             {
                 dronePool.Initialize(_droneService, _navigationService, _resourceService);
@@ -113,7 +109,6 @@ namespace Systems.Spawning
                 
                 if (_usePooling && dronePool != null)
                 {
-                    // Используем пул
                     drone = dronePool.GetDrone(baseObj);
                     if (drone != null && drone is MonoBehaviour droneMono)
                     {
@@ -122,7 +117,6 @@ namespace Systems.Spawning
                 }
                 else
                 {
-                    // Используем обычное создание
                 var droneObject = Instantiate(dronePrefab, spawnPosition, Quaternion.identity);
                     drone = droneObject.GetComponent<Drone>();
                 }
@@ -148,12 +142,10 @@ namespace Systems.Spawning
                 {
                     if (_usePooling && dronePool != null && drone is Drone droneComponent)
                     {
-                        // Возвращаем в пул
                         dronePool.ReturnDrone(droneComponent);
                     }
                     else
                     {
-                        // Обычное уничтожение
                     Destroy(droneMono.gameObject);
                     }
                 }

@@ -3,26 +3,19 @@ using UnityEngine;
 using System.Linq;
 
 /// <summary>
-/// Централизованный менеджер для управления Update и FixedUpdate
-/// Контролирует жизненный цикл объектов и вызывает их методы обновления
-/// Должен быть размещен на сцене вручную
+/// Менеджер для управления Update и FixedUpdate
 /// </summary>
 public class UpdateManager : MonoBehaviour
 {
-    // Списки для хранения обновляемых объектов
     private readonly List<IUpdatable> _updatables = new List<IUpdatable>();
     private readonly List<IFixedUpdatable> _fixedUpdatables = new List<IFixedUpdatable>();
-    
-    // Временные списки для безопасной итерации (на случай изменения во время обновления)
     private readonly List<IUpdatable> _updatablesToProcess = new List<IUpdatable>();
     private readonly List<IFixedUpdatable> _fixedUpdatablesToProcess = new List<IFixedUpdatable>();
-    
-    // Флаги для контроля обновлений
     private bool _isPaused = false;
     private bool _needsSort = false;
     
     /// <summary>
-    /// Регистрирует объект для обновления каждый кадр
+    /// Регистрирует объект для обновления
     /// </summary>
     public void RegisterUpdatable(IUpdatable updatable)
     {
@@ -40,7 +33,7 @@ public class UpdateManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Отменяет регистрацию объекта для обновления
+    /// Отменяет регистрацию объекта
     /// </summary>
     public void UnregisterUpdatable(IUpdatable updatable)
     {
@@ -51,7 +44,7 @@ public class UpdateManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Регистрирует объект для обновления в FixedUpdate
+    /// Регистрирует объект для FixedUpdate
     /// </summary>
     public void RegisterFixedUpdatable(IFixedUpdatable fixedUpdatable)
     {
@@ -102,7 +95,6 @@ public class UpdateManager : MonoBehaviour
             return;
         }
         
-        // Сортируем по приоритету при необходимости
         if (_needsSort)
         {
             _updatables.Sort((a, b) => a.UpdatePriority.CompareTo(b.UpdatePriority));
@@ -110,11 +102,9 @@ public class UpdateManager : MonoBehaviour
             _needsSort = false;
         }
         
-        // Копируем список для безопасной итерации
         _updatablesToProcess.Clear();
         _updatablesToProcess.AddRange(_updatables);
         
-        // Вызываем OnUpdate для всех зарегистрированных объектов
         float deltaTime = Time.deltaTime;
         foreach (var updatable in _updatablesToProcess)
         {
@@ -131,7 +121,6 @@ public class UpdateManager : MonoBehaviour
             }
         }
         
-        // Удаляем null ссылки (на случай уничтожения объектов)
         _updatables.RemoveAll(x => x == null);
     }
     
@@ -142,11 +131,9 @@ public class UpdateManager : MonoBehaviour
             return;
         }
         
-        // Копируем список для безопасной итерации
         _fixedUpdatablesToProcess.Clear();
         _fixedUpdatablesToProcess.AddRange(_fixedUpdatables);
         
-        // Вызываем OnFixedUpdate для всех зарегистрированных объектов
         float fixedDeltaTime = Time.fixedDeltaTime;
         foreach (var fixedUpdatable in _fixedUpdatablesToProcess)
         {
@@ -163,12 +150,11 @@ public class UpdateManager : MonoBehaviour
             }
         }
         
-        // Удаляем null ссылки
         _fixedUpdatables.RemoveAll(x => x == null);
     }
     
     /// <summary>
-    /// Очищает все регистрации (полезно при смене сцены)
+    /// Очищает все регистрации
     /// </summary>
     public void Clear()
     {

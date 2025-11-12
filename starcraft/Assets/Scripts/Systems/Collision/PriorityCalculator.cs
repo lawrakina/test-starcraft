@@ -6,14 +6,10 @@ namespace Systems.Collision
 {
     /// <summary>
     /// Калькулятор приоритетов для дронов
-    /// Рассчитывает эффективный приоритет на основе состояния, скорости и базового приоритета
     /// </summary>
     public static class PriorityCalculator
     {
-        // Порог скорости для определения стоящего дрона
         private const float StandingVelocityThreshold = 0.1f;
-        
-        // Бонусы к приоритету
         private const int StandingBonus = 10000;
         private const int CollectingBonus = 5000;
         
@@ -30,16 +26,14 @@ namespace Systems.Collision
                 return 0;
             }
             
-            int effectivePriority = drone.Priority; // Базовый приоритет
+            int effectivePriority = drone.Priority;
             
-            // Бонус за стояние (самый высокий приоритет)
             float speed = velocity.magnitude;
             if (speed < StandingVelocityThreshold)
             {
                 effectivePriority += StandingBonus;
             }
             
-            // Бонус за добычу ресурсов
             if (drone.CurrentState == DroneState.Collecting)
             {
                 effectivePriority += CollectingBonus;
@@ -81,18 +75,17 @@ namespace Systems.Collision
                 return 1; // drone2 должен уступить
             }
             
-            // Приоритеты равны - используем ID как tiebreaker (меньший ID имеет приоритет)
             if (drone1.Id < drone2.Id)
             {
-                return 1; // drone1 имеет приоритет по ID
+                return 1;
             }
             
             if (drone1.Id > drone2.Id)
             {
-                return -1; // drone2 имеет приоритет по ID
+                return -1;
             }
             
-            return 0; // Одинаковые дроны (не должно происходить)
+            return 0;
         }
         
         /// <summary>
@@ -110,9 +103,9 @@ namespace Systems.Collision
             return ComparePriorities(drone1, velocity1, drone2, velocity2) < 0;
         }
         
-        /// <summary>
-        /// Проверяет, является ли дрон стоящим (не движется)
-        /// </summary>
+    /// <summary>
+    /// Проверяет, является ли дрон стоящим
+    /// </summary>
         /// <param name="velocity">Скорость дрона</param>
         /// <returns>true если дрон стоит</returns>
         public static bool IsStanding(Vector3 velocity)

@@ -102,7 +102,6 @@ namespace Entities.Drone
             _visuals = GetComponent<DroneVisuals>();
             _pathRenderer = GetComponent<DronePathRenderer>();
             
-            // Регистрация происходит через SimulationManager
         }
         
         public void Initialize()
@@ -112,7 +111,6 @@ namespace Entities.Drone
                 return;
             }
             
-            // Получаем SimulationManager
             var simulationManager = SimulationManager.Instance;
             if (simulationManager == null)
             {
@@ -120,7 +118,6 @@ namespace Entities.Drone
                 return;
             }
             
-            // Инициализируем через сервисы из SimulationManager
             Initialize(
                 simulationManager.NavigationService,
                 simulationManager.ResourceService,
@@ -232,7 +229,6 @@ namespace Entities.Drone
                 faction = homeBase.Faction;
             }
             
-            // Обновляем цвета после установки базы
             if (_visuals != null)
             {
                 _visuals.RefreshColor();
